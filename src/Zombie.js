@@ -1,26 +1,32 @@
-const DISPLAY_HEIGHT = 110;
-const BODY_RADIUS = 33;
-const BODY_OFFSET_X = 50;
-const BODY_OFFSET_Y = 78;
-const MIN_FLIP_SPEED = 1;
-
-export const ZOMBIE_ANIMATION_KEY = 'zombie-walk';
+import { ZOMBIES } from './config.js';
 
 export default class Zombie {
-  constructor(scene, x, y, config) {
-    this.config = config;
-    this.gameObject = scene.add.sprite(x, y, 'zombie');
-    this.gameObject.setScale(DISPLAY_HEIGHT / this.gameObject.height);
-    this.gameObject.setDepth(-1);
+  constructor(scene, x, y, typeId = 'walker', onDeath = null) {
+    this.scene = scene;
+    this.config = ZOMBIES[typeId];
+    this.onDeath = onDeath;
+    this.hp = this.config.maxHp;
+    this.dead = false;
+    this.flashTimer = null;
+
+    this.gameObject = scene.add.sprite(x, y, this.config.walk.textureKey);
+    this.gameObject.setScale(this.config.displayHeight / this.gameObject.height);
+    this.gameObject.setDepth(this.config.depth);
     scene.physics.world.enable(this.gameObject);
     this.body = this.gameObject.body;
 
-    this.body.setCircle(BODY_RADIUS, BODY_OFFSET_X, BODY_OFFSET_Y);
+    this.body.setCircle(
+      this.config.body.radius,
+      this.config.body.offsetX,
+      this.config.body.offsetY,
+    );
     this.body.setCollideWorldBounds(true);
-    this.gameObject.play(ZOMBIE_ANIMATION_KEY);
+    this.gameObject.play(this.config.walk.animationKey);
   }
 
   update(player) {
+    if (this.dead) return;
+
     const dx = player.x - this.gameObject.x;
     const dy = player.y - this.gameObject.y;
     const distance = Math.hypot(dx, dy);
@@ -34,8 +40,54 @@ export default class Zombie {
       this.body.velocity.set(0, 0);
     }
 
-    if (Math.abs(this.body.velocity.x) >= MIN_FLIP_SPEED) {
+    if (Math.abs(this.body.velocity.x) >= this.config.minFlipSpeed) {
       this.gameObject.setFlipX(this.body.velocity.x > 0);
     }
+  }
+
+  takeDamage(amount) {
+    if (this.dead) return;
+
+    this.hp -= amount;
+    if (this.hp <= 0) {
+      this.die();
+      return;
+    }
+
+    this.flash();
+    this.scene.sound.play(this.config.sounds.hitKey);
+  }
+
+  flash() {
+    if (this.flashTimer) return;
+
+    this.gameObject.setTint(this.config.flashTint);
+    this.flashTimer = this.scene.time.delayedCall(this.config.flashDurationMs, () => {
+      this.flashTimer = null;
+      if (!this.dead && this.gameObject.active) this.gameObject.clearTint();
+    });
+  }
+
+  die() {
+    this.dead = true;
+    this.hp = 0;
+
+    this.body.velocity.set(0, 0);
+    this.body.enable = false;
+
+    if (this.flashTimer) {
+      this.flashTimer.remove(false);
+      this.flashTimer = null;
+    }
+    this.gameObject.clearTint();
+
+    this.gameObject.play(this.config.die.animationKey);
+    this.gameObject.once(
+      `animationcomplete-${this.config.die.animationKey}`,
+      () => this.gameObject.destroy(),
+    );
+    this.scene.sound.play(this.config.sounds.dieKey);
+
+    if (this.onDeath) this.onDeath(this);
   }
 }

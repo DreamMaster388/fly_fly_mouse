@@ -10,6 +10,5 @@
  * acceptance.test.js directly.
  */
 
-require('./acceptance.test.js');
-require('./weapon-orbit.acceptance.test.js');
-require('./zombie.acceptance.test.js');
+// Legacy suites (game-engine / weapon-orbit / zombie) are retired by
+// feature/add-weapon-damage; the independent suite is added by /sdlc-test.

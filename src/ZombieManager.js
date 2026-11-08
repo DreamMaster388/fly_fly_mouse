@@ -1,60 +1,64 @@
 import Phaser from 'phaser';
-import Zombie, { ZOMBIE_ANIMATION_KEY } from './Zombie.js';
-
-const FRAME_COUNT = 22;
-const FRAME_DURATIONS = [90, 180];
-const SPAWN_INTERVAL_MS = 2000;
-const MAX_ALIVE = 5;
-const SPAWN_ATTEMPTS = 20;
-const WORLD_INSET = 64;
-const CAMERA_MARGIN = 80;
-const CONFIG = { speed: 150 };
+import { ZOMBIES } from './config.js';
+import Zombie from './Zombie.js';
 
 export default class ZombieManager {
-  constructor(scene, player) {
+  constructor(scene, player, typeId = 'walker') {
     this.scene = scene;
     this.player = player;
-    this.config = { ...CONFIG };
+    this.typeId = typeId;
+    this.config = ZOMBIES[typeId];
     this.zombies = new Set();
 
-    this.createAnimation();
+    this.createAnimations();
     this.group = scene.physics.add.group();
     scene.physics.add.overlap(player.gameObject, this.group, this.handleContact, null, this);
 
     this.spawn();
     this.spawnTimer = scene.time.addEvent({
-      delay: SPAWN_INTERVAL_MS,
+      delay: this.config.spawnIntervalMs,
       loop: true,
       callback: this.spawn,
       callbackScope: this,
     });
   }
 
-  createAnimation() {
-    if (this.scene.anims.exists(ZOMBIE_ANIMATION_KEY)) return;
+  createAnimations() {
+    this.createAnimation(this.config.walk);
+    this.createAnimation(this.config.die);
+  }
 
-    const frames = this.scene.anims.generateFrameNumbers('zombie', {
+  createAnimation(animation) {
+    if (this.scene.anims.exists(animation.animationKey)) return;
+
+    const frames = this.scene.anims.generateFrameNumbers(animation.textureKey, {
       start: 0,
-      end: FRAME_COUNT - 1,
+      end: animation.frameCount - 1,
     });
     frames.forEach((frame, index) => {
-      frame.duration = FRAME_DURATIONS[index % FRAME_DURATIONS.length];
+      frame.duration = animation.frameDurations[index % animation.frameDurations.length];
     });
 
     this.scene.anims.create({
-      key: ZOMBIE_ANIMATION_KEY,
+      key: animation.animationKey,
       frames,
-      repeat: -1,
+      repeat: animation.repeat,
     });
   }
 
   spawn() {
-    if (this.zombies.size >= MAX_ALIVE) return;
+    if (this.zombies.size >= this.config.maxAlive) return;
 
     const point = this.findSpawnPoint();
     if (!point) return;
 
-    const zombie = new Zombie(this.scene, point.x, point.y, this.config);
+    const zombie = new Zombie(
+      this.scene,
+      point.x,
+      point.y,
+      this.typeId,
+      (deadZombie) => this.handleZombieDeath(deadZombie),
+    );
     this.group.add(zombie.gameObject);
     this.zombies.add(zombie);
     zombie.gameObject.once('destroy', () => this.zombies.delete(zombie));
@@ -69,16 +73,17 @@ export default class ZombieManager {
     const viewRight = viewLeft + viewWidth;
     const viewBottom = viewTop + viewHeight;
     const bounds = this.scene.physics.world.bounds;
+    const { worldInset, cameraMargin, spawnAttempts } = this.config;
 
-    for (let attempt = 0; attempt < SPAWN_ATTEMPTS; attempt += 1) {
-      const x = Phaser.Math.Between(bounds.left + WORLD_INSET, bounds.right - WORLD_INSET);
-      const y = Phaser.Math.Between(bounds.top + WORLD_INSET, bounds.bottom - WORLD_INSET);
+    for (let attempt = 0; attempt < spawnAttempts; attempt += 1) {
+      const x = Phaser.Math.Between(bounds.left + worldInset, bounds.right - worldInset);
+      const y = Phaser.Math.Between(bounds.top + worldInset, bounds.bottom - worldInset);
 
       const insideMargin =
-        x >= viewLeft - CAMERA_MARGIN &&
-        x <= viewRight + CAMERA_MARGIN &&
-        y >= viewTop - CAMERA_MARGIN &&
-        y <= viewBottom + CAMERA_MARGIN;
+        x >= viewLeft - cameraMargin &&
+        x <= viewRight + cameraMargin &&
+        y >= viewTop - cameraMargin &&
+        y <= viewBottom + cameraMargin;
 
       if (!insideMargin) return { x, y };
     }
@@ -89,6 +94,15 @@ export default class ZombieManager {
   update() {
     const player = this.player.gameObject;
     for (const zombie of this.zombies) zombie.update(player);
+  }
+
+  getLiveZombies() {
+    return Array.from(this.zombies);
+  }
+
+  handleZombieDeath(zombie) {
+    this.zombies.delete(zombie);
+    this.group.remove(zombie.gameObject);
   }
 
   handleContact(playerObject, zombieObject) {

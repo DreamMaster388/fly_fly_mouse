@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import Player from './Player.js';
 import WeaponOrbit from './WeaponOrbit.js';
 import ZombieManager from './ZombieManager.js';
+import Combat from './Combat.js';
+import { WEAPONS, ZOMBIES } from './config.js';
 import playerTextureUrl from '../resource/character/飞飞鼠完整-透明.png';
-import dartTextureUrl from '../resource/weapon/武器-飞镖-透明.png';
-import zombieSpritesheetUrl from '../resource/enemy/zombie-walk-spritesheet.png';
 
 export const WORLD_WIDTH = 2000;
 export const WORLD_HEIGHT = 2000;
@@ -23,11 +23,21 @@ export default class WorldScene extends Phaser.Scene {
 
   preload() {
     this.load.image('player', playerTextureUrl);
-    this.load.image('dart', dartTextureUrl);
-    this.load.spritesheet('zombie', zombieSpritesheetUrl, {
-      frameWidth: 166,
-      frameHeight: 144,
-    });
+
+    for (const weapon of Object.values(WEAPONS)) {
+      this.load.image(weapon.textureKey, weapon.textureUrl);
+    }
+
+    for (const zombie of Object.values(ZOMBIES)) {
+      for (const animation of [zombie.walk, zombie.die]) {
+        this.load.spritesheet(animation.textureKey, animation.textureUrl, {
+          frameWidth: animation.frameWidth,
+          frameHeight: animation.frameHeight,
+        });
+      }
+      this.load.audio(zombie.sounds.hitKey, zombie.sounds.hitUrl);
+      this.load.audio(zombie.sounds.dieKey, zombie.sounds.dieUrl);
+    }
   }
 
   create() {
@@ -40,15 +50,17 @@ export default class WorldScene extends Phaser.Scene {
     }
 
     this.player = new Player(this, WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
-    this.weaponOrbit = new WeaponOrbit(this, this.player);
+    this.weaponOrbit = new WeaponOrbit(this, this.player, 'dart');
     this.cameras.main.startFollow(this.player.gameObject);
     this.cameras.main.centerOn(this.player.gameObject.x, this.player.gameObject.y);
-    this.zombieManager = new ZombieManager(this, this.player);
+    this.zombieManager = new ZombieManager(this, this.player, 'walker');
+    this.combat = new Combat(this, this.weaponOrbit, this.zombieManager);
   }
 
   update(time) {
     this.player.update();
     this.weaponOrbit.update(time);
     this.zombieManager.update();
+    this.combat.update();
   }
 }
