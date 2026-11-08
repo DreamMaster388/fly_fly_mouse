@@ -3,9 +3,10 @@ import { ZOMBIES } from './config.js';
 import Zombie from './Zombie.js';
 
 export default class ZombieManager {
-  constructor(scene, player, typeId = 'walker', callbacks = {}) {
+  constructor(scene, player, difficulty, typeId = 'walker', callbacks = {}) {
     this.scene = scene;
     this.player = player;
+    this.difficulty = difficulty;
     this.typeId = typeId;
     this.config = ZOMBIES[typeId];
     this.zombies = new Set();
@@ -49,7 +50,8 @@ export default class ZombieManager {
   }
 
   spawn() {
-    if (this.zombies.size >= this.config.maxAlive) return;
+    const tier = this.difficulty.tier;
+    if (this.zombies.size >= tier.maxAlive) return;
 
     const point = this.findSpawnPoint();
     if (!point) return;
@@ -59,6 +61,10 @@ export default class ZombieManager {
       point.x,
       point.y,
       this.typeId,
+      {
+        speed: this.difficulty.rollZombieSpeed(),
+        maxHp: tier.maxHp,
+      },
       (deadZombie) => this.handleZombieDeath(deadZombie),
     );
     this.group.add(zombie.gameObject);

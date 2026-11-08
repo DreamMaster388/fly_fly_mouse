@@ -4,6 +4,10 @@ const STYLE = {
   fontSize: '24px',
   color: '#111111',
 };
+const DIFFICULTY_STYLE = {
+  ...STYLE,
+  fontSize: '20px',
+};
 const MARGIN = 24;
 const TOP = 20;
 
@@ -13,6 +17,10 @@ export default class Hud {
 
     this.timeText = scene.add
       .text(MARGIN, TOP, '0:00', STYLE)
+      .setScrollFactor(0)
+      .setDepth(1000);
+    this.difficultyText = scene.add
+      .text(MARGIN, TOP + 34, '难度', DIFFICULTY_STYLE)
       .setScrollFactor(0)
       .setDepth(1000);
     this.scoreText = scene.add
@@ -29,6 +37,11 @@ export default class Hud {
 
   setTime(text) {
     this.timeText.setText(text);
+  }
+
+  setDifficulty(name, color) {
+    this.difficultyText.setText(`难度 ${name}`);
+    this.difficultyText.setColor(color);
   }
 
   setScore(score) {

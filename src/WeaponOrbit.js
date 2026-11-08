@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { WEAPONS } from './config.js';
 
 export default class WeaponOrbit {
-  constructor(scene, player, typeId = 'dart') {
+  constructor(scene, player, typeId = 'dart', refillIntervalMs = 250) {
     this.scene = scene;
     this.player = player;
     this.config = WEAPONS[typeId];
@@ -11,17 +11,30 @@ export default class WeaponOrbit {
     this.centerOffsetY = 0;
     this.slots = new Array(this.config.slotCount).fill(null);
     this.refillCursor = 0;
+    this.refillIntervalMs = refillIntervalMs;
 
     for (let i = 0; i < this.config.slotCount; i += 1) {
       this.slots[i] = this.createDart();
     }
 
-    this.refillTimer = scene.time.addEvent({
-      delay: this.config.refillIntervalMs,
+    this.createRefillTimer();
+  }
+
+  createRefillTimer() {
+    this.refillTimer = this.scene.time.addEvent({
+      delay: this.refillIntervalMs,
       loop: true,
       callback: this.refillOne,
       callbackScope: this,
     });
+  }
+
+  setRefillInterval(ms) {
+    if (ms === this.refillIntervalMs) return;
+
+    this.refillIntervalMs = ms;
+    if (this.refillTimer) this.refillTimer.remove(false);
+    this.createRefillTimer();
   }
 
   createDart() {

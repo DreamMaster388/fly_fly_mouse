@@ -9,7 +9,6 @@ import bgmSoundUrl from '../resource/audio/2.75.mp3';
 export const GAMEPLAY = {
   initialHp: 10,
   contactDamage: 1,
-  killScore: 1,
 };
 
 export const AUDIO = {
@@ -26,7 +25,6 @@ export const WEAPONS = {
     textureUrl: dartTextureUrl,
     damage: 1,
     slotCount: 8,
-    refillIntervalMs: 1000,
     displayHeight: 27,
     orbitRadius: 90,
     orbitDegreesPerSecond: 90,
@@ -37,9 +35,6 @@ export const WEAPONS = {
 
 export const ZOMBIES = {
   walker: {
-    maxHp: 10,
-    speed: 150,
-    maxAlive: 5,
     spawnIntervalMs: 2000,
     spawnAttempts: 20,
     worldInset: 64,

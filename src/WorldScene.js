@@ -3,6 +3,7 @@ import Player from './Player.js';
 import WeaponOrbit from './WeaponOrbit.js';
 import ZombieManager from './ZombieManager.js';
 import Combat from './Combat.js';
+import Difficulty from './Difficulty.js';
 import Hud from './Hud.js';
 import ResultOverlay from './ResultOverlay.js';
 import { AUDIO, GAMEPLAY, WEAPONS, ZOMBIES } from './config.js';
@@ -49,6 +50,7 @@ export default class WorldScene extends Phaser.Scene {
     this.score = 0;
     this.elapsedMs = 0;
     this.gameOver = false;
+    this.difficulty = new Difficulty();
 
     this.cameras.main.setBackgroundColor(0xffffff);
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -59,10 +61,15 @@ export default class WorldScene extends Phaser.Scene {
     }
 
     this.player = new Player(this, WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
-    this.weaponOrbit = new WeaponOrbit(this, this.player, 'dart');
+    this.weaponOrbit = new WeaponOrbit(
+      this,
+      this.player,
+      'dart',
+      this.difficulty.tier.refillIntervalMs,
+    );
     this.cameras.main.startFollow(this.player.gameObject);
     this.cameras.main.centerOn(this.player.gameObject.x, this.player.gameObject.y);
-    this.zombieManager = new ZombieManager(this, this.player, 'walker', {
+    this.zombieManager = new ZombieManager(this, this.player, this.difficulty, 'walker', {
       onReachPlayer: () => this.handlePlayerHit(),
       onKill: () => this.handleZombieKilled(),
     });
@@ -72,6 +79,7 @@ export default class WorldScene extends Phaser.Scene {
     this.hud.setHp(this.hp, this.maxHp);
     this.hud.setScore(this.score);
     this.hud.setTime(this.formatTime(this.elapsedMs));
+    this.hud.setDifficulty(this.difficulty.tier.name, this.difficulty.tier.color);
   }
 
   update(time, delta) {
@@ -84,6 +92,13 @@ export default class WorldScene extends Phaser.Scene {
 
     this.elapsedMs += delta;
     this.hud.setTime(this.formatTime(this.elapsedMs));
+
+    if (this.difficulty.update(this.elapsedMs)) this.applyDifficulty();
+  }
+
+  applyDifficulty() {
+    this.hud.setDifficulty(this.difficulty.tier.name, this.difficulty.tier.color);
+    this.weaponOrbit.setRefillInterval(this.difficulty.tier.refillIntervalMs);
   }
 
   handlePlayerHit() {
@@ -97,7 +112,7 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   handleZombieKilled() {
-    this.score += GAMEPLAY.killScore;
+    this.score += this.difficulty.tier.killScore;
     this.hud.setScore(this.score);
   }
 

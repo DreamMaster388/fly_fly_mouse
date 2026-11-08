@@ -1,11 +1,12 @@
 import { ZOMBIES } from './config.js';
 
 export default class Zombie {
-  constructor(scene, x, y, typeId = 'walker', onDeath = null) {
+  constructor(scene, x, y, typeId = 'walker', stats, onDeath = null) {
     this.scene = scene;
     this.config = ZOMBIES[typeId];
     this.onDeath = onDeath;
-    this.hp = this.config.maxHp;
+    this.speed = stats.speed;
+    this.hp = stats.maxHp;
     this.dead = false;
     this.flashTimer = null;
 
@@ -33,8 +34,8 @@ export default class Zombie {
 
     if (distance > 0) {
       this.body.velocity.set(
-        (dx / distance) * this.config.speed,
-        (dy / distance) * this.config.speed,
+        (dx / distance) * this.speed,
+        (dy / distance) * this.speed,
       );
     } else {
       this.body.velocity.set(0, 0);
