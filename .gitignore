@@ -1,0 +1,12 @@
+# 黑名单模式：默认忽略所有
+*
+
+# 白名单：需要跟踪的文件/目录
+!.gitignore
+!package.json
+!package-lock.json
+!resource/
+!resource/**/*.png
+!skills/
+!skills/*/
+!skills/**/*.md
