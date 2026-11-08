@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import Player from './Player.js';
-import playerTextureUrl from '../resource/飞飞鼠完整-透明.png';
+import WeaponOrbit from './WeaponOrbit.js';
+import playerTextureUrl from '../resource/character/飞飞鼠完整-透明.png';
+import dartTextureUrl from '../resource/weapon/武器-飞镖-透明.png';
 
 export const WORLD_WIDTH = 2000;
 export const WORLD_HEIGHT = 2000;
@@ -19,6 +21,7 @@ export default class WorldScene extends Phaser.Scene {
 
   preload() {
     this.load.image('player', playerTextureUrl);
+    this.load.image('dart', dartTextureUrl);
   }
 
   create() {
@@ -31,10 +34,12 @@ export default class WorldScene extends Phaser.Scene {
     }
 
     this.player = new Player(this, WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+    this.weaponOrbit = new WeaponOrbit(this, this.player);
     this.cameras.main.startFollow(this.player.gameObject);
   }
 
-  update() {
+  update(time) {
     this.player.update();
+    this.weaponOrbit.update(time);
   }
 }

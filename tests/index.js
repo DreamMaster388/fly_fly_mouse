@@ -11,3 +11,4 @@
  */
 
 require('./acceptance.test.js');
+require('./weapon-orbit.acceptance.test.js');
