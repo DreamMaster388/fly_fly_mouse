@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import Player from './Player.js';
+import playerTextureUrl from '../resource/飞飞鼠完整-透明.png';
 
 export const WORLD_WIDTH = 2000;
 export const WORLD_HEIGHT = 2000;
@@ -14,6 +15,10 @@ const REFERENCE_OFFSETS = [
 export default class WorldScene extends Phaser.Scene {
   constructor() {
     super('world');
+  }
+
+  preload() {
+    this.load.image('player', playerTextureUrl);
   }
 
   create() {

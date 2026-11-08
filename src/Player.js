@@ -1,14 +1,25 @@
 import Phaser from 'phaser';
 
 const SPEED = 300;
-const RADIUS = 20;
+const DISPLAY_HEIGHT = 110;
+const BODY_RADIUS_RATIO = 0.28;
+const BODY_CENTER_Y_RATIO = 0.82;
 
 export default class Player {
   constructor(scene, x, y) {
-    this.gameObject = scene.add.circle(x, y, RADIUS, 0x000000);
+    this.gameObject = scene.add.image(x, y, 'player');
+    this.gameObject.setScale(DISPLAY_HEIGHT / this.gameObject.height);
     scene.physics.world.enable(this.gameObject);
     this.body = this.gameObject.body;
-    this.body.setCircle(RADIUS);
+
+    const sourceWidth = this.gameObject.width;
+    const sourceHeight = this.gameObject.height;
+    const radius = sourceWidth * BODY_RADIUS_RATIO;
+    this.body.setCircle(
+      radius,
+      sourceWidth / 2 - radius,
+      sourceHeight * BODY_CENTER_Y_RATIO - radius,
+    );
     this.body.setCollideWorldBounds(true);
 
     const keyCodes = Phaser.Input.Keyboard.KeyCodes;
@@ -30,6 +41,7 @@ export default class Player {
     if (this.cursors.down.isDown || this.wasd.down.isDown) direction.y += 1;
 
     if (direction.x !== 0 || direction.y !== 0) direction.normalize();
+    if (direction.x !== 0) this.gameObject.setFlipX(direction.x > 0);
     this.body.velocity.set(direction.x * SPEED, direction.y * SPEED);
   }
 }
