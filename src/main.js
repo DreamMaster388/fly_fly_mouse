@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import StartScene from './StartScene.js';
 import WorldScene from './WorldScene.js';
 
 const game = new Phaser.Game({
@@ -14,7 +15,7 @@ const game = new Phaser.Game({
   physics: {
     default: 'arcade',
   },
-  scene: [WorldScene],
+  scene: [StartScene, WorldScene],
 });
 
 if (import.meta.env.DEV) {

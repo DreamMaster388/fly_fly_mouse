@@ -3,6 +3,22 @@ import zombieWalkSpritesheetUrl from '../resource/enemy/zombie-walk-spritesheet.
 import zombieDieSpritesheetUrl from '../resource/enemy/zombie-die-spritesheet.png';
 import zombieHitSoundUrl from '../resource/audio/zombie-hit.mp3';
 import zombieDieSoundUrl from '../resource/audio/zombie-die.mp3';
+import chompSoundUrl from '../resource/audio/chomp.mp3';
+import bgmSoundUrl from '../resource/audio/2.75.mp3';
+
+export const GAMEPLAY = {
+  initialHp: 10,
+  contactDamage: 1,
+  killScore: 1,
+};
+
+export const AUDIO = {
+  chompKey: 'chomp',
+  chompUrl: chompSoundUrl,
+  bgmKey: 'bgm',
+  bgmUrl: bgmSoundUrl,
+  bgmVolume: 0.4,
+};
 
 export const WEAPONS = {
   dart: {

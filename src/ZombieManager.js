@@ -3,12 +3,14 @@ import { ZOMBIES } from './config.js';
 import Zombie from './Zombie.js';
 
 export default class ZombieManager {
-  constructor(scene, player, typeId = 'walker') {
+  constructor(scene, player, typeId = 'walker', callbacks = {}) {
     this.scene = scene;
     this.player = player;
     this.typeId = typeId;
     this.config = ZOMBIES[typeId];
     this.zombies = new Set();
+    this.onReachPlayer = callbacks.onReachPlayer || (() => {});
+    this.onZombieKilled = callbacks.onKill || (() => {});
 
     this.createAnimations();
     this.group = scene.physics.add.group();
@@ -103,6 +105,13 @@ export default class ZombieManager {
   handleZombieDeath(zombie) {
     this.zombies.delete(zombie);
     this.group.remove(zombie.gameObject);
+    this.onZombieKilled(zombie);
+  }
+
+  stop() {
+    if (!this.spawnTimer) return;
+    this.spawnTimer.remove(false);
+    this.spawnTimer = null;
   }
 
   handleContact(playerObject, zombieObject) {
@@ -110,6 +119,4 @@ export default class ZombieManager {
     this.onReachPlayer(zombieObject);
     zombieObject.destroy();
   }
-
-  onReachPlayer() {}
 }
