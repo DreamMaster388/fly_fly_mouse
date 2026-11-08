@@ -12,3 +12,4 @@
 
 require('./acceptance.test.js');
 require('./weapon-orbit.acceptance.test.js');
+require('./zombie.acceptance.test.js');

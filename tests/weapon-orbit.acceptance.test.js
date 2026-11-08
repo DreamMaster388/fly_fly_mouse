@@ -878,13 +878,16 @@ test('R7 each dart has a circular, gravity-free, inert body sized from its 27px 
         else if (Array.isArray(colliders.list)) list = colliders.list;
       }
       const darts = scene.children.list.filter((o) => o.texture && o.texture.key === 'dart');
-      const dartIds = new Set(darts.map((d) => (d.body ? d.body.id : -1)));
+      const dartBodies = new Set(darts.map((d) => d.body).filter(Boolean));
       const involvesDart = (obj) => {
         if (!obj) return false;
-        if (obj.body && dartIds.has(obj.body.id)) return true;
+        if (obj.body && dartBodies.has(obj.body)) return true;
         if (obj.object1 && involvesDart(obj.object1)) return true;
         if (obj.object2 && involvesDart(obj.object2)) return true;
         if (Array.isArray(obj.children)) return obj.children.some(involvesDart);
+        if (obj.children && typeof obj.children.values === 'function') {
+          return [...obj.children.values()].some(involvesDart);
+        }
         return false;
       };
       return {
