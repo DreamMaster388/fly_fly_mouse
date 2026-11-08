@@ -30,6 +30,10 @@ R9 → 无痕窗口打开公网链接可玩
 - 打包限制：单文件 50 MiB、产物 50 MiB；`phaser.esm.js` 未压缩 8.4 MB，需以 `dist/` 实测为准。
 - 本期不做触屏，手机打开链接玩不了是已确认结果，不是缺陷。
 
+变更记录：4.2.1 的 Arcade Factory 没有 `circle`/`existing`，第 2 步改用 `add.circle` + `physics.world.enable`；`main.js` 在 DEV 下暴露 `window.game` 供自检，生产构建不含。
+变更记录：实测反馈后新增四个红色参照圆，并在加载与点击时把焦点交给画布，修复预览 iframe 下键盘偶发失效。
+变更记录：评审打回后修复——焦点恢复改到 `click` 后执行（pointerdown 的聚焦会被默认行为覆盖）；新增 `vite.config.mjs` 设 `base: './'`，修复子路径部署资源 404（用 `.mjs` 避免 ESM 配置被当 CJS 加载的告警）。
+
 批准：lyd @ 2026-11-08。
 
 下一步：/sdlc-build

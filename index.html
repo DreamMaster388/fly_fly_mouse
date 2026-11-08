@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>飞飞鼠</title>
+    <style>
+      :root {
+        --site-bg: #000;
+        --site-fg: #e6e6e6;
+        --site-accent: #fff;
+        --site-on-accent: #000;
+        --site-surface: #fff;
+        --site-muted: #9a9a9a;
+        --site-border: #222;
+        --site-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --site-radius: 12px;
+        --site-space: 1;
+        --site-type: 1;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--site-bg);
+        color: var(--site-fg);
+        font-family: var(--site-font);
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #game {
+        flex: 1;
+        min-height: 0;
+      }
+
+      #game canvas {
+        border-radius: var(--site-radius);
+        outline: none;
+      }
+
+      .hint {
+        margin: 0;
+        padding: calc(8px * var(--site-space)) calc(16px * var(--site-space))
+          calc(16px * var(--site-space));
+        border-top: 1px solid var(--site-border);
+        text-align: center;
+        font-size: calc(14px * var(--site-type));
+        color: var(--site-muted);
+      }
+
+      .hint kbd {
+        padding: 2px 6px;
+        border: 1px solid var(--site-accent);
+        border-radius: calc(var(--site-radius) / 3);
+        background: var(--site-surface);
+        color: var(--site-on-accent);
+        font-family: var(--site-font);
+        font-size: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <p class="hint">点击画面后，用 <kbd>方向键</kbd> 或 <kbd>WASD</kbd> 移动</p>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

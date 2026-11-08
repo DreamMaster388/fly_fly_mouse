@@ -12,3 +12,9 @@
 !skills/**/*.md
 !docs/
 !docs/**
+!index.html
+!vite.config.mjs
+!src/
+!src/**/*.js
+!tests/
+!tests/**/*.js
