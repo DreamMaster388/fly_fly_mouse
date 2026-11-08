@@ -10,3 +10,5 @@
 !skills/
 !skills/*/
 !skills/**/*.md
+!docs/
+!docs/**
