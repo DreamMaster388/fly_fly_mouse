@@ -14,7 +14,10 @@ export default class Combat {
       if (hits.length === 0) continue;
 
       for (const zombie of hits) {
-        zombie.takeDamage(this.weaponOrbit.config.damage);
+        zombie.takeDamage(
+          this.weaponOrbit.config.damage,
+          this.weaponOrbit.config.damageType,
+        );
       }
       this.weaponOrbit.consume(dart);
     }

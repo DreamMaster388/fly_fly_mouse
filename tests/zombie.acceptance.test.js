@@ -6,7 +6,7 @@
  * Every expectation below is derived from docs/sdlc/feat/add-zombie/spec.md (R1-R10).
  * The spec's "证明方式" hints are only a starting point; boundary conditions are added
  * here: 5 (not 4/6) alive, spawn times on the 2000ms grid, spawn points just inside the
- * map and just outside the 80px camera margin, vx ~ 0 mirroring (both starting facings),
+ * map and 80-280px outside the camera rect, vx ~ 0 mirroring (both starting facings),
  * destruction on body overlap (and survival just outside it), 22 frames with alternating
  * 90/180ms delays summing to 2.97s, loop wrap, undistorted 110px display height, render
  * order, circular body inside the display footprint, and no zombie-zombie collider.
@@ -49,6 +49,7 @@ const CYCLE_MS = (FRAME_COUNT / 2) * (90 + 180); // 2970 (R2 "整轮约 2.97 秒
 const MAX_ALIVE = 5; // R3
 const SPAWN_INTERVAL = 2000; // R3
 const CAMERA_MARGIN = 80; // R4
+const SPAWN_MAX_MARGIN = 280; // R4: spawns must stay close to the screen edge
 const SPEED = 150; // R5/R6 (300 / 2)
 const PLAYER_SPEED = 300; // R5 ("主角 300 的一半")
 const DISPLAY_HEIGHT = 110; // R8
@@ -694,10 +695,10 @@ test('R3 spawn rhythm: first spawn immediately, one attempt every 2000ms, at mos
 });
 
 /* ------------------------------------------------------------------ *
- * R4 - spawn points inside the map and >= 80px outside the camera
+ * R4 - spawn points inside the map and 80-280px outside the camera
  * ------------------------------------------------------------------ */
 
-test('R4 spawn positions: inside the map bounds and at least 80px clear of the camera view (fully off screen)', { timeout: 120000 }, async (t) => {
+test('R4 spawn positions: inside the map bounds and 80-280px outside the camera view (off screen but close)', { timeout: 120000 }, async (t) => {
   await withGame(t, { initScript: SPAWN_RECORDER }, async (page) => {
     await setPhysics(page, true);
     await page.waitForTimeout(8600);
@@ -735,6 +736,10 @@ test('R4 spawn positions: inside the map bounds and at least 80px clear of the c
       assert.ok(
         margin >= CAMERA_MARGIN - 0.5,
         `spawn #${i} must be at least ${CAMERA_MARGIN}px away from the camera rect ${JSON.stringify(e.view)}, got ${margin.toFixed(2)}px`,
+      );
+      assert.ok(
+        margin <= SPAWN_MAX_MARGIN + 0.5,
+        `spawn #${i} must be at most ${SPAWN_MAX_MARGIN}px away from the camera rect ${JSON.stringify(e.view)}, got ${margin.toFixed(2)}px`,
       );
       assert.ok(
         !rectsOverlap(rect, e.view),

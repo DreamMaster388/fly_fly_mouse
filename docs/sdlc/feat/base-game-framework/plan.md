@@ -39,5 +39,6 @@ R10 → 再来一局直接回 world，血量/分数/计时/敌人全部重置，
 
 变更记录：验收套件交由 /sdlc-test 独立编写，本次 build 不新增 tests/base-flow.acceptance.test.js，tests/index.js 保持不变。
 变更记录：实测发现 Container 的 scrollFactor 不传递给子元素，结算面板子元素需各自 setScrollFactor(0)，否则「再来一局」命中测试偏移、无法点击。
+变更记录：/sdlc-test 已交付 tests/base-flow.acceptance.test.js 与 tests/helpers/harness.js，tests/index.js 挂载；生产构建冒烟通过。
 
 下一步：/sdlc-build

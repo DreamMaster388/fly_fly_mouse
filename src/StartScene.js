@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { AUDIO } from './config.js';
-
-const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+import { FONT_FAMILY } from './fonts.js';
 
 export default class StartScene extends Phaser.Scene {
   constructor() {

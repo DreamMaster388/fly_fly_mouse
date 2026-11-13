@@ -32,4 +32,7 @@ R7 → HUD 文本与颜色随档。
 
 批准：lyd @ 2026-11-08。
 
+变更记录：/sdlc-test 新增 tests/difficulty.acceptance.test.js 并挂到 tests/index.js；实测升档后 350ms 内只补 1 枚并随后补满。
+变更记录（2026-11-12）：固定配装调整后，难度档只保留 name、color、killScore；speedMean、maxAlive、maxHp、refillIntervalMs 与高斯采样全部移除。僵尸固定 30 速/10 血，武器固定 5 伤/开局 0/1 秒补 1/上限 8，场上数量改由全局人口 10 控制。difficulty 套件删除速度采样、档位上限、档位补速用例，由 loadout-population 套件覆盖新规则。
+
 下一步：/sdlc-build

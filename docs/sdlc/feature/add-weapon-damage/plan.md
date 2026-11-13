@@ -36,4 +36,8 @@ R12/R13 → 接触仍直接销毁不扣血；主角/相机/刷新/追踪不变�
 
 批准：lyd @ 2026-11-08。
 
+变更记录：/sdlc-test 新增 tests/weapon-damage.acceptance.test.js 与 tests/helpers/harness.js，tests/index.js 改为挂载 base-flow/weapon-damage/difficulty 三套；R6/R7/R14 的固定 10HP/1000ms 在王者档复现。
+变更记录：R14 验收发现 scene.sound.play 复用同一实例，Zombie.playSound 改为每次 sound.add 新建、complete 后 destroy，接口不变。
+变更记录（2026-11-12）：旋转飞镖固定伤害 5、开局 0 枚、1 秒补 1 枚、上限 8；普通僵尸固定速度 30、血量 10、人口占用 1；场上数量不再由难度档决定。weapon 套件按新数值更新，并新增 tests/loadout-population.acceptance.test.js。
+
 下一步：/sdlc-build

@@ -1,7 +1,7 @@
-const FONT_FAMILY = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+import { FONT_FAMILY } from './fonts.js';
 
 export default class ResultOverlay {
-  constructor(scene, { score, survivalTime, onRestart }) {
+  constructor(scene, { gold, survivalTime, onRestart }) {
     const { width, height } = scene.scale;
     const centerX = width / 2;
     const centerY = height / 2;
@@ -18,8 +18,8 @@ export default class ResultOverlay {
         color: '#111111',
       })
       .setOrigin(0.5);
-    const scoreText = scene.add
-      .text(centerX, centerY - 30, `分数 ${score}`, {
+    const goldText = scene.add
+      .text(centerX, centerY - 30, `金钱 ${gold}`, {
         fontFamily: FONT_FAMILY,
         fontSize: '24px',
         color: '#222222',
@@ -47,7 +47,7 @@ export default class ResultOverlay {
     button.on('pointerout', () => button.setBackgroundColor('#111111'));
     button.on('pointerdown', onRestart);
 
-    const children = [shade, panel, title, scoreText, timeText, button];
+    const children = [shade, panel, title, goldText, timeText, button];
     for (const child of children) child.setScrollFactor(0);
 
     this.container = scene.add

@@ -31,6 +31,7 @@ export default class Player {
       right: keyCodes.D,
     });
     this.direction = new Phaser.Math.Vector2();
+    this.speedMultiplier = 1;
   }
 
   update() {
@@ -42,6 +43,7 @@ export default class Player {
 
     if (direction.x !== 0 || direction.y !== 0) direction.normalize();
     if (direction.x !== 0) this.gameObject.setFlipX(direction.x > 0);
-    this.body.velocity.set(direction.x * SPEED, direction.y * SPEED);
+    const speed = SPEED * this.speedMultiplier;
+    this.body.velocity.set(direction.x * speed, direction.y * speed);
   }
 }
