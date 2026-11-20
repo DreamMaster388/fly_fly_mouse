@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
-import { LOCUSTS, ZOMBIES, getEnemyConfig } from './config.js';
+import { DOGS, LOCUSTS, ZOMBIES, getEnemyConfig } from './config.js';
 import Zombie from './Zombie.js';
 import Locust from './Locust.js';
+import Dog from './Dog.js';
 
 function rectGap(x, y, left, top, right, bottom) {
   const dx = Math.max(left - x, 0, x - right);
@@ -17,6 +18,8 @@ export default class ZombieManager {
     this.typeId = typeId;
     this.config = ZOMBIES[typeId];
     this.zombies = new Set();
+    this.activeDogs = new Set();
+    this.dogChance = DOGS.dog.spawnChance;
     this.locustChance = LOCUSTS.locust.spawnChance;
     this.onReachPlayer = callbacks.onReachPlayer || (() => {});
     this.onZombieKilled = callbacks.onKill || (() => {});
@@ -71,6 +74,9 @@ export default class ZombieManager {
     const cost = config.populationCost;
     if (!this.population.canAdd(cost)) return null;
 
+    const isDog = typeId in DOGS;
+    if (isDog && this.activeDogs.size >= 1) return null;
+
     const point = this.findSpawnPoint(config);
     if (!point) return null;
 
@@ -81,12 +87,21 @@ export default class ZombieManager {
     const isLocust = typeId in LOCUSTS;
     const onDeath = (deadEnemy) => this.handleZombieDeath(deadEnemy);
 
-    const enemy = isLocust
-      ? new Locust(this.scene, point.x, point.y, typeId, stats, { onDeath })
-      : new Zombie(this.scene, point.x, point.y, typeId, stats, {
+    let enemy;
+    if (isDog) {
+      enemy = new Dog(this.scene, point.x, point.y, typeId, stats, {
+        onDeath,
+        onContact: (attacker) => this.onReachPlayer(attacker),
+      });
+      this.activeDogs.add(enemy);
+    } else if (isLocust) {
+      enemy = new Locust(this.scene, point.x, point.y, typeId, stats, { onDeath });
+    } else {
+      enemy = new Zombie(this.scene, point.x, point.y, typeId, stats, {
         onDeath,
         onAttack: (attacker) => this.onReachPlayer(attacker),
       });
+    }
 
     this.group.add(enemy.gameObject);
     this.zombies.add(enemy);
@@ -94,14 +109,17 @@ export default class ZombieManager {
     enemy.gameObject.once('destroy', () => {
       this.zombies.delete(enemy);
       this.population.remove(enemy);
+      this.activeDogs.delete(enemy);
     });
 
     return enemy;
   }
 
   spawnScheduled() {
-    const typeId = Math.random() < this.locustChance ? 'locust' : this.typeId;
-    return this.spawn(typeId);
+    const roll = Math.random();
+    if (roll < this.dogChance) return this.spawn('dog');
+    if (roll < this.dogChance + this.locustChance) return this.spawn('locust');
+    return this.spawn(this.typeId);
   }
 
   findSpawnPoint(config = this.config) {
@@ -175,6 +193,7 @@ export default class ZombieManager {
     const count = this.zombies.size;
     for (const zombie of Array.from(this.zombies)) zombie.destroy();
     this.zombies.clear();
+    this.activeDogs.clear();
     this.group.clear(true, true);
     this.population.clear();
     return count;

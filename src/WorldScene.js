@@ -20,7 +20,7 @@ import Inventory, {
   nextUpgradeStats,
 } from './items.js';
 import { SPAWN, WORLD } from './mapLayout.js';
-import { AUDIO, CONSOLE, GAMEPLAY, LOCUSTS, MAX_WEAPON_LEVEL, TRINKETS, WEAPONS, ZOMBIES } from './config.js';
+import { AUDIO, CONSOLE, DOGS, GAMEPLAY, LOCUSTS, MAX_WEAPON_LEVEL, TRINKETS, WEAPONS, ZOMBIES } from './config.js';
 import { ZOMBIE_ARM_BONE_ASSET, ZOMBIE_PART_ASSETS } from './zombieArtAssets.js';
 import { ZOMBIE_CHARRED_ASSETS } from './zombieCharredAssets.js';
 import playerTextureUrl from '../resource/character/飞飞鼠完整-透明.png';
@@ -94,6 +94,15 @@ export default class WorldScene extends Phaser.Scene {
         locust.death,
         locust.slime,
       ]) {
+        this.load.spritesheet(animation.textureKey, animation.textureUrl, {
+          frameWidth: animation.frameWidth,
+          frameHeight: animation.frameHeight,
+        });
+      }
+    }
+
+    for (const dog of Object.values(DOGS)) {
+      for (const animation of [dog.walk, dog.howl, dog.angry, dog.angryWalk]) {
         this.load.spritesheet(animation.textureKey, animation.textureUrl, {
           frameWidth: animation.frameWidth,
           frameHeight: animation.frameHeight,
@@ -257,6 +266,16 @@ export default class WorldScene extends Phaser.Scene {
     this.hud.setHp(this.hp, this.maxHp);
 
     if (this.hp <= 0) this.endGame();
+  }
+
+  handleDogHowl() {
+    const camera = this.cameras.main;
+    for (const enemy of this.zombieManager.getLiveZombies()) {
+      if (enemy.typeId !== 'locust') continue;
+      if (enemy.dead || enemy.enraged || enemy.injured) continue;
+      const center = enemy.body.center;
+      if (camera.worldView.contains(center.x, center.y)) enemy.beginEnrage();
+    }
   }
 
   handleLocustExplosion(locust) {
