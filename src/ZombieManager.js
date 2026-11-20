@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { ZOMBIES } from './config.js';
+import { LOCUSTS, ZOMBIES, getEnemyConfig } from './config.js';
 import Zombie from './Zombie.js';
+import Locust from './Locust.js';
 
 function rectGap(x, y, left, top, right, bottom) {
   const dx = Math.max(left - x, 0, x - right);
@@ -16,8 +17,10 @@ export default class ZombieManager {
     this.typeId = typeId;
     this.config = ZOMBIES[typeId];
     this.zombies = new Set();
+    this.locustChance = LOCUSTS.locust.spawnChance;
     this.onReachPlayer = callbacks.onReachPlayer || (() => {});
     this.onZombieKilled = callbacks.onKill || (() => {});
+    this.onSelfDestruct = callbacks.onSelfDestruct || (() => {});
 
     // Legacy spritesheet animations (superseded by ZombieArt reanim parts):
     // this.createAnimations();
@@ -25,11 +28,11 @@ export default class ZombieManager {
     scene.physics.add.collider(this.group, this.group);
     scene.physics.add.collider(player.gameObject, this.group);
 
-    this.spawn();
+    this.spawnScheduled();
     this.spawnTimer = scene.time.addEvent({
       delay: this.config.spawnIntervalMs,
       loop: true,
-      callback: this.spawn,
+      callback: this.spawnScheduled,
       callbackScope: this,
     });
   }
@@ -62,39 +65,50 @@ export default class ZombieManager {
   //   });
   // }
 
-  spawn() {
-    const cost = this.config.populationCost;
+  spawn(typeId = this.typeId) {
+    const config = getEnemyConfig(typeId);
+    if (!config) return null;
+
+    const cost = config.populationCost;
     if (!this.population.canAdd(cost)) return null;
 
-    const point = this.findSpawnPoint();
+    const point = this.findSpawnPoint(config);
     if (!point) return null;
 
-    const zombie = new Zombie(
-      this.scene,
-      point.x,
-      point.y,
-      this.typeId,
-      {
-        speed: this.config.speed,
-        maxHp: this.config.maxHp,
-      },
-      {
-        onDeath: (deadZombie) => this.handleZombieDeath(deadZombie),
+    const stats = {
+      speed: config.speed,
+      maxHp: config.maxHp,
+    };
+    const isLocust = typeId in LOCUSTS;
+    const onDeath = (deadEnemy) => this.handleZombieDeath(deadEnemy);
+
+    const enemy = isLocust
+      ? new Locust(this.scene, point.x, point.y, typeId, stats, {
+        onDeath,
+        onSelfDestruct: (destroyedLocust) => this.handleSelfDestruct(destroyedLocust),
+      })
+      : new Zombie(this.scene, point.x, point.y, typeId, stats, {
+        onDeath,
         onAttack: (attacker) => this.onReachPlayer(attacker),
-      },
-    );
-    this.group.add(zombie.gameObject);
-    this.zombies.add(zombie);
-    this.population.add(zombie, cost);
-    zombie.gameObject.once('destroy', () => {
-      this.zombies.delete(zombie);
-      this.population.remove(zombie);
+      });
+
+    this.group.add(enemy.gameObject);
+    this.zombies.add(enemy);
+    this.population.add(enemy, cost);
+    enemy.gameObject.once('destroy', () => {
+      this.zombies.delete(enemy);
+      this.population.remove(enemy);
     });
 
-    return zombie;
+    return enemy;
   }
 
-  findSpawnPoint() {
+  spawnScheduled() {
+    const typeId = Math.random() < this.locustChance ? 'locust' : this.typeId;
+    return this.spawn(typeId);
+  }
+
+  findSpawnPoint(config = this.config) {
     const camera = this.scene.cameras.main;
     const viewWidth = camera.width / (camera.zoomX || 1);
     const viewHeight = camera.height / (camera.zoomY || 1);
@@ -103,7 +117,7 @@ export default class ZombieManager {
     const viewRight = viewLeft + viewWidth;
     const viewBottom = viewTop + viewHeight;
     const bounds = this.scene.physics.world.bounds;
-    const { worldInset, cameraMargin, spawnMaxMargin, spawnAttempts } = this.config;
+    const { worldInset, cameraMargin, spawnMaxMargin, spawnAttempts } = config;
 
     // Spawn in a ring just outside the camera: never on screen, but close
     // enough that enemies reach the player instead of wandering in from afar.
@@ -119,7 +133,8 @@ export default class ZombieManager {
       const gap = rectGap(x, y, viewLeft, viewTop, viewRight, viewBottom);
 
       if (gap < cameraMargin || gap > spawnMaxMargin) continue;
-      if (this.scene.gameMap && !this.scene.gameMap.canSpawnAt(x, y, this.config.body.radius + 8)) {
+      const padding = config.spawnPadding ?? (config.body?.radius ?? 0) + 8;
+      if (this.scene.gameMap && !this.scene.gameMap.canSpawnAt(x, y, padding)) {
         continue;
       }
       return { x, y };
@@ -133,10 +148,9 @@ export default class ZombieManager {
     const playerBody = this.player.body;
     const playerX = playerBody ? playerBody.center.x : player.x;
     const playerY = playerBody ? playerBody.center.y : player.y;
-    const { despawnDistance } = this.config;
-    const despawnSq = (despawnDistance || 0) ** 2;
 
     for (const zombie of this.zombies) {
+      const despawnSq = (zombie.config.despawnDistance || 0) ** 2;
       if (despawnSq && !zombie.despawnExempt) {
         const dx = zombie.body.center.x - playerX;
         const dy = zombie.body.center.y - playerY;
@@ -175,6 +189,14 @@ export default class ZombieManager {
     this.population.remove(zombie);
     this.group.remove(zombie.gameObject);
     this.onZombieKilled(zombie);
+  }
+
+  handleSelfDestruct(locust) {
+    this.zombies.delete(locust);
+    this.population.remove(locust);
+    this.group.remove(locust.gameObject);
+    this.onSelfDestruct(locust);
+    locust.destroy();
   }
 
   stop() {

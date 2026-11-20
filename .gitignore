@@ -23,5 +23,6 @@ resource/Plants-vs-zombies/
 !vite.config.mjs
 !src/
 !src/**/*.js
+!src/**/*.css
 !tests/
 !tests/**/*.js
