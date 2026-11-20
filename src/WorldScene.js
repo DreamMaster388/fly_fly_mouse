@@ -86,7 +86,14 @@ export default class WorldScene extends Phaser.Scene {
     }
 
     for (const locust of Object.values(LOCUSTS)) {
-      for (const animation of [locust.walk, locust.hurt, locust.death, locust.slime]) {
+      for (const animation of [
+        locust.walk,
+        locust.hurt,
+        locust.enrage,
+        locust.enrageWalk,
+        locust.death,
+        locust.slime,
+      ]) {
         this.load.spritesheet(animation.textureKey, animation.textureUrl, {
           frameWidth: animation.frameWidth,
           frameHeight: animation.frameHeight,
@@ -213,7 +220,7 @@ export default class WorldScene extends Phaser.Scene {
     this.player.speedMultiplier = this.gameMap.speedMultiplierAt(playerCenter.x, playerCenter.y);
     this.player.update();
     for (const weapon of this.weaponInstances.values()) weapon.update(time);
-    this.zombieManager.update(time);
+    this.zombieManager.update(time, delta);
     this.slimes.update(this.player, time);
     this.combat.update();
     this.minimap.update(this.player, this.zombieManager.zombies);
@@ -255,11 +262,11 @@ export default class WorldScene extends Phaser.Scene {
   handleLocustExplosion(locust) {
     if (this.gameOver) return;
 
-    const { damage, radius } = locust.config.explosion;
+    const { damage, enragedDamage, radius } = locust.config.explosion;
     const blast = locust.deathPoint;
     const center = this.player.body.center;
     if (Math.hypot(center.x - blast.x, center.y - blast.y) <= radius) {
-      this.handlePlayerHit(damage);
+      this.handlePlayerHit(locust.enraged ? enragedDamage : damage);
     }
   }
 
