@@ -31,8 +31,6 @@ export default class Locust {
     this.injured = false;
     this.enraged = false;
     this.enraging = false;
-    this.seen = false;
-    this.seenMs = 0;
     this.flashTimer = null;
     this.exploded = false;
     this.selfDestructed = false;
@@ -78,8 +76,6 @@ export default class Locust {
       return;
     }
 
-    if (!this.enraged && !this.injured) this.updateEnrage(delta);
-
     if (this.enraging) {
       this.body.velocity.set(0, 0);
       return;
@@ -104,17 +100,6 @@ export default class Locust {
     if (Math.abs(this.body.velocity.x) >= this.config.minFlipSpeed) {
       this.setFacing(this.body.velocity.x > 0);
     }
-  }
-
-  updateEnrage(delta) {
-    if (!this.seen) {
-      const camera = this.scene.cameras.main;
-      if (!camera || !camera.worldView.contains(this.body.center.x, this.body.center.y)) return;
-      this.seen = true;
-    }
-
-    this.seenMs += delta;
-    if (this.seenMs >= this.config.enrageDelayMs) this.beginEnrage();
   }
 
   beginEnrage() {

@@ -15,6 +15,10 @@ import locustEnrageSpritesheetUrl from '../resource/mob/locust/locust-enrage-spr
 import locustAngryWalkSpritesheetUrl from '../resource/mob/locust/locust-angry-walk-spritesheet.png';
 import locustDeathSpritesheetUrl from '../resource/mob/locust/locust-death-spritesheet.png';
 import locustSlimeSpritesheetUrl from '../resource/mob/locust/locust-slime-spritesheet.png';
+import dogWalkSpritesheetUrl from '../resource/mob/dog/dog-walk-spritesheet.png';
+import dogHowlSpritesheetUrl from '../resource/mob/dog/dog-howl-spritesheet.png';
+import dogAngrySpritesheetUrl from '../resource/mob/dog/dog-angry-spritesheet.png';
+import dogAngryWalkSpritesheetUrl from '../resource/mob/dog/dog-angry-walk-spritesheet.png';
 import zombieHitSoundUrl from '../resource/audio/zombie-hit.mp3';
 import zombieDieSoundUrl from '../resource/audio/zombie-die.mp3';
 import chompSoundUrl from '../resource/audio/chomp.mp3';
@@ -313,13 +317,12 @@ export const LOCUSTS = {
     maxHp: 6,
     injuredHpRatio: 0.5,
     injuredSpeedMultiplier: 1.2,
-    enrageDelayMs: 3000,
     enrageSpeedMultiplier: 2,
     reward: {
       gold: 10,
       xp: 30,
     },
-    spawnChance: 0.3,
+    spawnChance: 0.2,
     spawnIntervalMs: 2000,
     spawnAttempts: 20,
     spawnPadding: 33,
@@ -432,6 +435,100 @@ export const LOCUSTS = {
   },
 };
 
+export const DOGS = {
+  dog: {
+    name: '狗',
+    populationCost: 3,
+    speed: 60,
+    maxHp: 100,
+    howlDelayMs: 3000,
+    howlWaitMs: 2000,
+    enrageSpeedMultiplier: 3,
+    reward: {
+      gold: 200,
+      xp: 400,
+    },
+    spawnChance: 0.1,
+    spawnIntervalMs: 2000,
+    spawnAttempts: 20,
+    spawnPadding: 50,
+    worldInset: 64,
+    cameraMargin: 80,
+    spawnMaxMargin: 280,
+    despawnDistance: 1600,
+    displayHeight: 120,
+    depth: -1,
+    minFlipSpeed: 1,
+    flashDurationMs: 120,
+    flashTint: 0xff0000,
+    fadeMs: 300,
+    contact: {
+      damage: 200,
+      rangePadding: 8,
+    },
+    walk: {
+      textureKey: 'dog-walk-sheet',
+      textureUrl: dogWalkSpritesheetUrl,
+      frameWidth: 261,
+      frameHeight: 200,
+      frameCount: 97,
+      frameRate: 24,
+      animationKey: 'dog-walk',
+      repeat: -1,
+      body: {
+        radius: 46,
+        offsetX: 84,
+        offsetY: 84,
+      },
+    },
+    howl: {
+      textureKey: 'dog-howl-sheet',
+      textureUrl: dogHowlSpritesheetUrl,
+      frameWidth: 261,
+      frameHeight: 229,
+      frameCount: 65,
+      frameRate: 24,
+      animationKey: 'dog-howl',
+      repeat: 0,
+      body: {
+        radius: 46,
+        offsetX: 84,
+        offsetY: 100,
+      },
+    },
+    angry: {
+      textureKey: 'dog-angry-sheet',
+      textureUrl: dogAngrySpritesheetUrl,
+      frameWidth: 318,
+      frameHeight: 205,
+      frameCount: 97,
+      frameRate: 24,
+      animationKey: 'dog-angry',
+      repeat: 0,
+      body: {
+        radius: 54,
+        offsetX: 105,
+        offsetY: 80,
+      },
+    },
+    angryWalk: {
+      textureKey: 'dog-angry-walk-sheet',
+      textureUrl: dogAngryWalkSpritesheetUrl,
+      frameWidth: 363,
+      frameHeight: 199,
+      frameCount: 97,
+      frameRate: 24,
+      animationKey: 'dog-angry-walk',
+      repeat: -1,
+      body: {
+        radius: 60,
+        offsetX: 121,
+        offsetY: 70,
+      },
+    },
+  },
+};
+
 export function getEnemyConfig(typeId) {
-  return ZOMBIES[typeId] || LOCUSTS[typeId] || null;
+  return ZOMBIES[typeId] || LOCUSTS[typeId] || DOGS[typeId] || null;
 }

@@ -84,6 +84,7 @@ describe('enraged locust explosion acceptance', () => {
       });
       const index = await H.spawnTestLocust(page, LOCUST.x, LOCUST.y, { speed: 0 });
       await H.teleportPlayer(page, LOCUST.x + 100, LOCUST.y);
+      await H.callTestLocust(page, index, 'beginEnrage');
 
       await waitForAngryWalk(page, index);
       assert.equal((await H.readTestLocust(page, index)).enraged, true);
@@ -117,6 +118,7 @@ describe('enraged locust explosion acceptance', () => {
     try {
       const before = await H.readGameState(page);
       const index = await H.spawnTestLocust(page, LOCUST.x, LOCUST.y, { speed: 0 });
+      await H.callTestLocust(page, index, 'beginEnrage');
       await waitForAngryWalk(page, index);
 
       const occupied = await H.readGameState(page);
@@ -168,6 +170,7 @@ describe('enraged locust explosion acceptance', () => {
       const before = await H.readGameState(page);
       const index = await H.spawnTestLocust(page, LOCUST.x, LOCUST.y, { speed: 0 });
       await H.teleportPlayer(page, LOCUST.x + 300, LOCUST.y);
+      await H.callTestLocust(page, index, 'beginEnrage');
 
       await waitForAngryWalk(page, index);
       await H.callTestLocust(page, index, 'takeDamage', 9999);
@@ -183,6 +186,7 @@ describe('enraged locust explosion acceptance', () => {
     try {
       const index = await H.spawnTestLocust(page, LOCUST.x, LOCUST.y, { speed: 0 });
       await H.teleportPlayer(page, LOCUST.x + 300, LOCUST.y);
+      await H.callTestLocust(page, index, 'beginEnrage');
       await waitForAngryWalk(page, index);
       await H.callTestLocust(page, index, 'takeDamage', 9999);
 
