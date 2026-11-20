@@ -11,6 +11,8 @@ import zombieDieSpritesheetUrl from '../resource/enemy/zombie-die-spritesheet.pn
 import zombieHeadSpritesheetUrl from '../resource/enemy/zombie-head-spritesheet.png';
 import locustWalkSpritesheetUrl from '../resource/mob/locust/locust-walk-spritesheet.png';
 import locustHurtSpritesheetUrl from '../resource/mob/locust/locust-hurt-spritesheet.png';
+import locustDeathSpritesheetUrl from '../resource/mob/locust/locust-death-spritesheet.png';
+import locustSlimeSpritesheetUrl from '../resource/mob/locust/locust-slime-spritesheet.png';
 import zombieHitSoundUrl from '../resource/audio/zombie-hit.mp3';
 import zombieDieSoundUrl from '../resource/audio/zombie-die.mp3';
 import chompSoundUrl from '../resource/audio/chomp.mp3';
@@ -327,8 +329,12 @@ export const LOCUSTS = {
     flashDurationMs: 120,
     flashTint: 0xff0000,
     contact: {
-      damage: 10,
       rangePadding: 8,
+    },
+    explosion: {
+      damage: 20,
+      radius: 120,
+      atMs: 625,
     },
     walk: {
       textureKey: 'locust-walk-sheet',
@@ -359,8 +365,30 @@ export const LOCUSTS = {
       },
     },
     death: {
-      fadeMs: 350,
-      sinkPx: 20,
+      textureKey: 'locust-death-sheet',
+      textureUrl: locustDeathSpritesheetUrl,
+      frameWidth: 456,
+      frameHeight: 260,
+      frameCount: 37,
+      frameRate: 24,
+      animationKey: 'locust-death',
+      repeat: 0,
+    },
+    slime: {
+      textureKey: 'locust-slime-sheet',
+      textureUrl: locustSlimeSpritesheetUrl,
+      frameWidth: 392,
+      frameHeight: 90,
+      frameCount: 37,
+      frameRate: 12,
+      animationKey: 'locust-slime',
+      lifetimeMs: 30000,
+      fadeMs: 400,
+      depth: -2,
+      touchRadius: 70,
+      touchCooldownMs: 1000,
+      dotTickMs: 1000,
+      dotDamagePerStack: 1,
     },
     sounds: {
       hitKey: 'zombie-hit',

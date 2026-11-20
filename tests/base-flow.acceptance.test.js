@@ -192,7 +192,8 @@ describe('base-game-framework acceptance', () => {
 
       const placed = await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
-        const zombie = scene.zombieManager.getLiveZombies()[0];
+        // The scheduled spawn can be a locust, so pick a normal zombie explicitly.
+        const zombie = scene.zombieManager.spawn('normal');
         const body = scene.player.body;
         window.__contactZombie = zombie;
         zombie.body.reset(body.center.x, body.center.y);
@@ -262,7 +263,8 @@ describe('base-game-framework acceptance', () => {
       const reward = await page.evaluate(async () => {
         const scene = window.game.scene.getScene('world');
         const { ZOMBIES } = await import('/src/config.js');
-        const zombie = scene.zombieManager.getLiveZombies()[0];
+        // The scheduled spawn can be a locust, so pick a normal zombie explicitly.
+        const zombie = scene.zombieManager.spawn('normal');
         if (!zombie) return null;
         zombie.takeDamage(zombie.hp);
         return { ...ZOMBIES.normal.reward };

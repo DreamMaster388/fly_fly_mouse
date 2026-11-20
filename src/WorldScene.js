@@ -12,6 +12,7 @@ import DevConsole from './DevConsole.js';
 import GameMap, { MAP_TEXTURE } from './GameMap.js';
 import Minimap from './Minimap.js';
 import UiFade from './UiFade.js';
+import Slimes from './Slimes.js';
 import Inventory, {
   canRepeat,
   getItem,
@@ -85,7 +86,7 @@ export default class WorldScene extends Phaser.Scene {
     }
 
     for (const locust of Object.values(LOCUSTS)) {
-      for (const animation of [locust.walk, locust.hurt]) {
+      for (const animation of [locust.walk, locust.hurt, locust.death, locust.slime]) {
         this.load.spritesheet(animation.textureKey, animation.textureUrl, {
           frameWidth: animation.frameWidth,
           frameHeight: animation.frameHeight,
@@ -106,6 +107,7 @@ export default class WorldScene extends Phaser.Scene {
     this.gameOver = false;
     this.hpLocked = false;
     this.shopOpen = false;
+    this.slimeStacks = 0;
     this.inventory = new Inventory({ weapons: ['dart'] });
     this.weaponLevels = { dart: 1 };
     this.upgradePoints = 0;
@@ -120,6 +122,7 @@ export default class WorldScene extends Phaser.Scene {
     this.gameMap = new GameMap(this);
     this.player = new Player(this, SPAWN.x, SPAWN.y);
     this.population = new Population(GAMEPLAY.maxPopulation);
+    this.slimes = new Slimes(this);
     this.weaponInstances = new Map();
     this.weaponOrbit = new WeaponOrbit(this, this.player, 'dart');
     this.weaponInstances.set('dart', this.weaponOrbit);
@@ -129,7 +132,6 @@ export default class WorldScene extends Phaser.Scene {
     this.zombieManager = new ZombieManager(this, this.player, this.population, 'normal', {
       onReachPlayer: (zombie) => this.handlePlayerHit(zombie.config.contact.damage),
       onKill: (zombie) => this.handleZombieKilled(zombie),
-      onSelfDestruct: (locust) => this.handlePlayerHit(locust.config.contact.damage),
     });
     this.physics.add.collider(this.zombieManager.group, this.gameMap.colliders);
     this.combat = new Combat(this, this.weaponOrbit, this.zombieManager);
@@ -147,6 +149,19 @@ export default class WorldScene extends Phaser.Scene {
     this.hud.setTime(this.formatTime(this.elapsedMs));
     this.hud.setDifficulty(this.difficulty.tier.name, this.difficulty.tier.color);
     this.minimap = new Minimap(this);
+
+    const slimeConfig = LOCUSTS.locust.slime;
+    this.slimeFlash = this.add
+      .rectangle(0, 0, this.scale.width, this.scale.height, 0xff2b2b, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(1500);
+    this.time.addEvent({
+      delay: slimeConfig.dotTickMs,
+      loop: true,
+      callback: this.tickSlimeDamage,
+      callbackScope: this,
+    });
 
     if (CONSOLE.enabled) this.devConsole = new DevConsole(this);
 
@@ -199,6 +214,7 @@ export default class WorldScene extends Phaser.Scene {
     this.player.update();
     for (const weapon of this.weaponInstances.values()) weapon.update(time);
     this.zombieManager.update(time);
+    this.slimes.update(this.player, time);
     this.combat.update();
     this.minimap.update(this.player, this.zombieManager.zombies);
     this.uiFade.update(delta);
@@ -234,6 +250,43 @@ export default class WorldScene extends Phaser.Scene {
     this.hud.setHp(this.hp, this.maxHp);
 
     if (this.hp <= 0) this.endGame();
+  }
+
+  handleLocustExplosion(locust) {
+    if (this.gameOver) return;
+
+    const { damage, radius } = locust.config.explosion;
+    const blast = locust.deathPoint;
+    const center = this.player.body.center;
+    if (Math.hypot(center.x - blast.x, center.y - blast.y) <= radius) {
+      this.handlePlayerHit(damage);
+    }
+  }
+
+  addSlimeStack() {
+    if (this.gameOver) return;
+    this.slimeStacks += 1;
+  }
+
+  tickSlimeDamage() {
+    if (this.gameOver || this.hpLocked || this.slimeStacks <= 0) return;
+
+    const damage = this.slimeStacks * LOCUSTS.locust.slime.dotDamagePerStack;
+    this.hp = Math.max(0, this.hp - damage);
+    this.hud.setHp(this.hp, this.maxHp);
+    this.flashSlimeDamage();
+    if (this.hp <= 0) this.endGame();
+  }
+
+  flashSlimeDamage() {
+    if (!this.slimeFlash) return;
+    this.slimeFlash.setAlpha(0.16);
+    this.tweens.add({
+      targets: this.slimeFlash,
+      alpha: 0,
+      duration: 320,
+      ease: 'Sine.easeOut',
+    });
   }
 
   handleZombieKilled(zombie) {

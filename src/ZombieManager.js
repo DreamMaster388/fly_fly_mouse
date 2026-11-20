@@ -20,7 +20,6 @@ export default class ZombieManager {
     this.locustChance = LOCUSTS.locust.spawnChance;
     this.onReachPlayer = callbacks.onReachPlayer || (() => {});
     this.onZombieKilled = callbacks.onKill || (() => {});
-    this.onSelfDestruct = callbacks.onSelfDestruct || (() => {});
 
     // Legacy spritesheet animations (superseded by ZombieArt reanim parts):
     // this.createAnimations();
@@ -83,10 +82,7 @@ export default class ZombieManager {
     const onDeath = (deadEnemy) => this.handleZombieDeath(deadEnemy);
 
     const enemy = isLocust
-      ? new Locust(this.scene, point.x, point.y, typeId, stats, {
-        onDeath,
-        onSelfDestruct: (destroyedLocust) => this.handleSelfDestruct(destroyedLocust),
-      })
+      ? new Locust(this.scene, point.x, point.y, typeId, stats, { onDeath })
       : new Zombie(this.scene, point.x, point.y, typeId, stats, {
         onDeath,
         onAttack: (attacker) => this.onReachPlayer(attacker),
@@ -188,15 +184,7 @@ export default class ZombieManager {
     this.zombies.delete(zombie);
     this.population.remove(zombie);
     this.group.remove(zombie.gameObject);
-    this.onZombieKilled(zombie);
-  }
-
-  handleSelfDestruct(locust) {
-    this.zombies.delete(locust);
-    this.population.remove(locust);
-    this.group.remove(locust.gameObject);
-    this.onSelfDestruct(locust);
-    locust.destroy();
+    if (!zombie.selfDestructed) this.onZombieKilled(zombie);
   }
 
   stop() {

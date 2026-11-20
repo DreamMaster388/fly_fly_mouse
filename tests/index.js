@@ -27,3 +27,7 @@ require('./shop-catalog.acceptance.test.js');
 require('./weapon-upgrade.acceptance.test.js');
 require('./bomb-weapon.acceptance.test.js');
 require('./explosion-death.acceptance.test.js');
+require('./locust-death.acceptance.test.js');
+require('./locust-explosion.acceptance.test.js');
+require('./locust-slime.acceptance.test.js');
+require('./slime-dot.acceptance.test.js');

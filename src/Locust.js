@@ -1,7 +1,7 @@
 import { LOCUSTS, getEnemyConfig } from './config.js';
 
 function ensureAnimations(scene, config) {
-  for (const animation of [config.walk, config.hurt]) {
+  for (const animation of [config.walk, config.hurt, config.death]) {
     if (scene.anims.exists(animation.animationKey)) continue;
     scene.anims.create({
       key: animation.animationKey,
@@ -10,7 +10,7 @@ function ensureAnimations(scene, config) {
         end: animation.frameCount - 1,
       }),
       frameRate: animation.frameRate,
-      repeat: -1,
+      repeat: animation.repeat ?? -1,
     });
   }
 }
@@ -29,6 +29,10 @@ export default class Locust {
     this.destroyed = false;
     this.injured = false;
     this.flashTimer = null;
+    this.exploded = false;
+    this.selfDestructed = false;
+    this.deathPoint = null;
+    this.explosionTimer = null;
     this.currentAnimation = this.config.walk;
 
     ensureAnimations(scene, this.config);
@@ -36,6 +40,7 @@ export default class Locust {
     this.gameObject = scene.add.sprite(x, y, this.currentAnimation.textureKey);
     this.gameObject.setDepth(this.config.depth);
     this.applyAnimation(this.currentAnimation, { play: true });
+    this.standingScale = this.gameObject.scaleX;
 
     scene.physics.world.enable(this.gameObject);
     this.body = this.gameObject.body;
@@ -130,45 +135,48 @@ export default class Locust {
     if (this.dead) return;
     this.dead = true;
     this.hp = 0;
+    this.deathPoint = { x: this.body.center.x, y: this.body.center.y };
 
     this.body.velocity.set(0, 0);
     this.body.enable = false;
     this.clearFlash();
     this.gameObject.clearTint();
-    this.prepareDeathFrame();
+    this.playDeathAnimation();
     this.playSound(this.config.sounds.dieKey);
-
-    this.scene.tweens.add({
-      targets: this.gameObject,
-      y: this.gameObject.y + this.config.death.sinkPx,
-      alpha: 0,
-      duration: this.config.death.fadeMs,
-      ease: 'Quad.easeIn',
-      onComplete: () => this.destroy(),
-    });
+    this.scheduleExplosion();
 
     if (this.onDeath) this.onDeath(this);
   }
 
-  prepareDeathFrame() {
-    if (!this.injured) {
-      this.applyAnimation(this.config.hurt, { play: false });
-    }
-    this.gameObject.anims.stop();
+  scheduleExplosion() {
+    this.explosionTimer = this.scene.time.delayedCall(
+      this.config.explosion.atMs,
+      () => this.explode(),
+    );
+  }
+
+  explode() {
+    if (this.exploded || this.scene.gameOver) return;
+    this.exploded = true;
+    this.scene.handleLocustExplosion(this);
+  }
+
+  playDeathAnimation() {
+    const death = this.config.death;
+    this.currentAnimation = death;
+    this.gameObject.setTexture(death.textureKey, 0);
+    this.gameObject.setScale(this.standingScale);
+    this.gameObject.play(death.animationKey);
+    this.gameObject.once(`animationcomplete-${death.animationKey}`, () => {
+      this.scene.slimes.spawn(this.deathPoint.x, this.deathPoint.y, this.standingScale);
+      this.destroy();
+    });
   }
 
   selfDestruct() {
     if (this.dead) return;
-    this.dead = true;
-    this.hp = 0;
-
-    this.body.velocity.set(0, 0);
-    this.body.enable = false;
-    this.clearFlash();
-    this.gameObject.clearTint();
-
-    if (this.onSelfDestruct) this.onSelfDestruct(this);
-    else this.destroy();
+    this.selfDestructed = true;
+    this.die();
   }
 
   applyAnimation(animation, { play }) {
@@ -205,6 +213,10 @@ export default class Locust {
     if (this.destroyed) return;
     this.destroyed = true;
     this.clearFlash();
+    if (this.explosionTimer) {
+      this.explosionTimer.remove(false);
+      this.explosionTimer = null;
+    }
     if (this.gameObject && this.gameObject.active) this.gameObject.destroy();
   }
 }
