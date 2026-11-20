@@ -19,7 +19,7 @@ import Inventory, {
   nextUpgradeStats,
 } from './items.js';
 import { SPAWN, WORLD } from './mapLayout.js';
-import { AUDIO, CONSOLE, GAMEPLAY, MAX_WEAPON_LEVEL, TRINKETS, WEAPONS, ZOMBIES } from './config.js';
+import { AUDIO, CONSOLE, GAMEPLAY, LOCUSTS, MAX_WEAPON_LEVEL, TRINKETS, WEAPONS, ZOMBIES } from './config.js';
 import { ZOMBIE_ARM_BONE_ASSET, ZOMBIE_PART_ASSETS } from './zombieArtAssets.js';
 import { ZOMBIE_CHARRED_ASSETS } from './zombieCharredAssets.js';
 import playerTextureUrl from '../resource/character/飞飞鼠完整-透明.png';
@@ -83,6 +83,15 @@ export default class WorldScene extends Phaser.Scene {
       this.load.audio(zombie.sounds.hitKey, zombie.sounds.hitUrl);
       this.load.audio(zombie.sounds.dieKey, zombie.sounds.dieUrl);
     }
+
+    for (const locust of Object.values(LOCUSTS)) {
+      for (const animation of [locust.walk, locust.hurt]) {
+        this.load.spritesheet(animation.textureKey, animation.textureUrl, {
+          frameWidth: animation.frameWidth,
+          frameHeight: animation.frameHeight,
+        });
+      }
+    }
   }
 
   create() {
@@ -120,6 +129,7 @@ export default class WorldScene extends Phaser.Scene {
     this.zombieManager = new ZombieManager(this, this.player, this.population, 'normal', {
       onReachPlayer: (zombie) => this.handlePlayerHit(zombie.config.contact.damage),
       onKill: (zombie) => this.handleZombieKilled(zombie),
+      onSelfDestruct: (locust) => this.handlePlayerHit(locust.config.contact.damage),
     });
     this.physics.add.collider(this.zombieManager.group, this.gameMap.colliders);
     this.combat = new Combat(this, this.weaponOrbit, this.zombieManager);

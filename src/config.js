@@ -9,6 +9,8 @@ import zombieWalk3SpritesheetUrl from '../resource/enemy/zombie-walk-3-spriteshe
 import zombieAttackSpritesheetUrl from '../resource/enemy/zombie-attack-spritesheet.png';
 import zombieDieSpritesheetUrl from '../resource/enemy/zombie-die-spritesheet.png';
 import zombieHeadSpritesheetUrl from '../resource/enemy/zombie-head-spritesheet.png';
+import locustWalkSpritesheetUrl from '../resource/mob/locust/locust-walk-spritesheet.png';
+import locustHurtSpritesheetUrl from '../resource/mob/locust/locust-hurt-spritesheet.png';
 import zombieHitSoundUrl from '../resource/audio/zombie-hit.mp3';
 import zombieDieSoundUrl from '../resource/audio/zombie-die.mp3';
 import chompSoundUrl from '../resource/audio/chomp.mp3';
@@ -298,3 +300,75 @@ export const ZOMBIES = {
     },
   },
 };
+
+export const LOCUSTS = {
+  locust: {
+    name: '蝗虫',
+    populationCost: 1,
+    speed: 45,
+    maxHp: 6,
+    injuredHpRatio: 0.5,
+    injuredSpeedMultiplier: 1.2,
+    reward: {
+      gold: 10,
+      xp: 30,
+    },
+    spawnChance: 0.3,
+    spawnIntervalMs: 2000,
+    spawnAttempts: 20,
+    spawnPadding: 33,
+    worldInset: 64,
+    cameraMargin: 80,
+    spawnMaxMargin: 280,
+    despawnDistance: 1600,
+    displayHeight: 100,
+    depth: -1,
+    minFlipSpeed: 1,
+    flashDurationMs: 120,
+    flashTint: 0xff0000,
+    contact: {
+      damage: 10,
+      rangePadding: 8,
+    },
+    walk: {
+      textureKey: 'locust-walk-sheet',
+      textureUrl: locustWalkSpritesheetUrl,
+      frameWidth: 315,
+      frameHeight: 216,
+      frameCount: 25,
+      frameRate: 12,
+      animationKey: 'locust-walk',
+      body: {
+        radius: 54,
+        offsetX: 112,
+        offsetY: 76,
+      },
+    },
+    hurt: {
+      textureKey: 'locust-hurt-sheet',
+      textureUrl: locustHurtSpritesheetUrl,
+      frameWidth: 343,
+      frameHeight: 220,
+      frameCount: 25,
+      frameRate: 12,
+      animationKey: 'locust-hurt',
+      body: {
+        radius: 55,
+        offsetX: 130,
+        offsetY: 80,
+      },
+    },
+    death: {
+      fadeMs: 350,
+      sinkPx: 20,
+    },
+    sounds: {
+      hitKey: 'zombie-hit',
+      dieKey: 'zombie-die',
+    },
+  },
+};
+
+export function getEnemyConfig(typeId) {
+  return ZOMBIES[typeId] || LOCUSTS[typeId] || null;
+}
