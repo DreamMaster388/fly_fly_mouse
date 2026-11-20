@@ -31,3 +31,5 @@ require('./locust-death.acceptance.test.js');
 require('./locust-explosion.acceptance.test.js');
 require('./locust-slime.acceptance.test.js');
 require('./slime-dot.acceptance.test.js');
+require('./locust-enrage.acceptance.test.js');
+require('./locust-enraged-explosion.acceptance.test.js');

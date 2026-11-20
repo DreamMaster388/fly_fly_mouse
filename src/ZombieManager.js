@@ -139,7 +139,7 @@ export default class ZombieManager {
     return null;
   }
 
-  update(time) {
+  update(time, delta = 0) {
     const player = this.player.gameObject;
     const playerBody = this.player.body;
     const playerX = playerBody ? playerBody.center.x : player.x;
@@ -157,7 +157,7 @@ export default class ZombieManager {
           continue;
         }
       }
-      zombie.update(player, time);
+      zombie.update(player, time, delta);
     }
   }
 

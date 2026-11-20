@@ -11,6 +11,8 @@ import zombieDieSpritesheetUrl from '../resource/enemy/zombie-die-spritesheet.pn
 import zombieHeadSpritesheetUrl from '../resource/enemy/zombie-head-spritesheet.png';
 import locustWalkSpritesheetUrl from '../resource/mob/locust/locust-walk-spritesheet.png';
 import locustHurtSpritesheetUrl from '../resource/mob/locust/locust-hurt-spritesheet.png';
+import locustEnrageSpritesheetUrl from '../resource/mob/locust/locust-enrage-spritesheet.png';
+import locustAngryWalkSpritesheetUrl from '../resource/mob/locust/locust-angry-walk-spritesheet.png';
 import locustDeathSpritesheetUrl from '../resource/mob/locust/locust-death-spritesheet.png';
 import locustSlimeSpritesheetUrl from '../resource/mob/locust/locust-slime-spritesheet.png';
 import zombieHitSoundUrl from '../resource/audio/zombie-hit.mp3';
@@ -311,6 +313,8 @@ export const LOCUSTS = {
     maxHp: 6,
     injuredHpRatio: 0.5,
     injuredSpeedMultiplier: 1.2,
+    enrageDelayMs: 3000,
+    enrageSpeedMultiplier: 2,
     reward: {
       gold: 10,
       xp: 30,
@@ -333,6 +337,7 @@ export const LOCUSTS = {
     },
     explosion: {
       damage: 20,
+      enragedDamage: 40,
       radius: 120,
       atMs: 625,
     },
@@ -362,6 +367,36 @@ export const LOCUSTS = {
         radius: 55,
         offsetX: 130,
         offsetY: 80,
+      },
+    },
+    enrage: {
+      textureKey: 'locust-enrage-sheet',
+      textureUrl: locustEnrageSpritesheetUrl,
+      frameWidth: 329,
+      frameHeight: 222,
+      frameCount: 21,
+      frameRate: 12,
+      animationKey: 'locust-enrage',
+      repeat: 0,
+      body: {
+        radius: 56,
+        offsetX: 117,
+        offsetY: 78,
+      },
+    },
+    enrageWalk: {
+      textureKey: 'locust-angry-walk-sheet',
+      textureUrl: locustAngryWalkSpritesheetUrl,
+      frameWidth: 338,
+      frameHeight: 224,
+      frameCount: 25,
+      frameRate: 24,
+      animationKey: 'locust-angry-walk',
+      repeat: -1,
+      body: {
+        radius: 58,
+        offsetX: 120,
+        offsetY: 79,
       },
     },
     death: {

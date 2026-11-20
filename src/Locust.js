@@ -1,7 +1,8 @@
 import { LOCUSTS, getEnemyConfig } from './config.js';
 
 function ensureAnimations(scene, config) {
-  for (const animation of [config.walk, config.hurt, config.death]) {
+  const animations = [config.walk, config.hurt, config.enrage, config.enrageWalk, config.death];
+  for (const animation of animations.filter(Boolean)) {
     if (scene.anims.exists(animation.animationKey)) continue;
     scene.anims.create({
       key: animation.animationKey,
@@ -28,6 +29,10 @@ export default class Locust {
     this.dead = false;
     this.destroyed = false;
     this.injured = false;
+    this.enraged = false;
+    this.enraging = false;
+    this.seen = false;
+    this.seenMs = 0;
     this.flashTimer = null;
     this.exploded = false;
     this.selfDestructed = false;
@@ -53,7 +58,7 @@ export default class Locust {
     this.setFacing(false);
   }
 
-  update(player) {
+  update(player, time, delta = 0) {
     if (this.dead) return;
 
     const playerBody = player.body;
@@ -70,6 +75,13 @@ export default class Locust {
 
     if (distance <= contactRange) {
       this.selfDestruct();
+      return;
+    }
+
+    if (!this.enraged && !this.injured) this.updateEnrage(delta);
+
+    if (this.enraging) {
+      this.body.velocity.set(0, 0);
       return;
     }
 
@@ -94,7 +106,32 @@ export default class Locust {
     }
   }
 
+  updateEnrage(delta) {
+    if (!this.seen) {
+      const camera = this.scene.cameras.main;
+      if (!camera || !camera.worldView.contains(this.body.center.x, this.body.center.y)) return;
+      this.seen = true;
+    }
+
+    this.seenMs += delta;
+    if (this.seenMs >= this.config.enrageDelayMs) this.beginEnrage();
+  }
+
+  beginEnrage() {
+    if (this.enraged || this.injured || this.dead) return;
+    this.enraged = true;
+    this.enraging = true;
+    this.body.velocity.set(0, 0);
+    this.applyAnimation(this.config.enrage, { play: true });
+    this.gameObject.once(`animationcomplete-${this.config.enrage.animationKey}`, () => {
+      if (this.dead || !this.enraging) return;
+      this.enraging = false;
+      this.applyAnimation(this.config.enrageWalk, { play: true });
+    });
+  }
+
   getSpeed() {
+    if (this.enraged) return this.baseSpeed * this.config.enrageSpeedMultiplier;
     return this.baseSpeed * (this.injured ? this.config.injuredSpeedMultiplier : 1);
   }
 
@@ -107,7 +144,7 @@ export default class Locust {
       return;
     }
 
-    if (!this.injured && this.hp <= this.maxHp * this.config.injuredHpRatio) {
+    if (!this.enraged && !this.injured && this.hp <= this.maxHp * this.config.injuredHpRatio) {
       this.enterInjured();
     }
 
@@ -116,7 +153,7 @@ export default class Locust {
   }
 
   enterInjured() {
-    if (this.injured) return;
+    if (this.injured || this.enraged) return;
     this.injured = true;
     this.applyAnimation(this.config.hurt, { play: true });
   }
@@ -134,6 +171,7 @@ export default class Locust {
   die() {
     if (this.dead) return;
     this.dead = true;
+    this.enraging = false;
     this.hp = 0;
     this.deathPoint = { x: this.body.center.x, y: this.body.center.y };
 
