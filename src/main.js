@@ -3,7 +3,6 @@ import './fonts.css';
 import { FONT_FACE } from './fonts.js';
 import StartScene from './StartScene.js';
 import WorldScene from './WorldScene.js';
-import ShopScene from './ShopScene.js';
 
 async function boot() {
   // Phaser renders text into a canvas once, so the face has to be available first.
@@ -33,7 +32,7 @@ async function boot() {
     physics: {
       default: 'arcade',
     },
-    scene: [StartScene, WorldScene, ShopScene],
+    scene: [StartScene, WorldScene],
   });
 
   if (import.meta.env.DEV) {

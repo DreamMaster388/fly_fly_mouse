@@ -127,7 +127,7 @@ describe('add-weapon-damage acceptance', () => {
       assert.equal(zombie.populationCost, 1);
       assert.equal(zombie.speed, 30);
       assert.equal(zombie.maxHp, 10);
-      assert.deepEqual(zombie.reward, { gold: 21, xp: 60 }, 'normal zombie drops are fixed');
+      assert.deepEqual(zombie.reward, { xp: 60 }, 'normal zombie drops are fixed');
       assert.equal(zombie.spawnIntervalMs, 2000);
       assert.equal(zombie.spawnAttempts, 20);
       assert.equal(zombie.worldInset, 64);
@@ -606,7 +606,6 @@ describe('add-weapon-damage acceptance', () => {
       const sounds = await H.readSoundLog(page);
 
       assert.equal(after.hp, 638, 'the attack tick deals the configured 10 damage');
-      assert.equal(after.gold, before.gold, 'contact damage must not award gold');
       assert.equal(after.xp, before.xp, 'contact damage must not award XP');
       assert.equal(zombie.active, true, 'contact no longer destroys the zombie');
       assert.equal(zombie.dead, false, 'contact must not run the death flow');

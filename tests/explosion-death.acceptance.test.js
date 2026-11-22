@@ -218,9 +218,9 @@ describe('explosion death acceptance', () => {
       await spawnZombie(page, 400, 400, 10);
       await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
-        scene.addGold(1000);
-        const result = scene.purchaseItem('bomb');
-        if (!result.ok) throw new Error(`bomb purchase failed: ${result.reason}`);
+        scene.inventory.addItem('bomb');
+        scene.mountWeapon('bomb');
+        scene.hud.refreshItems();
         const zombie = window.__testZombies[0];
         const dx = zombie.body.center.x - zombie.gameObject.x;
         const dy = zombie.body.center.y - zombie.gameObject.y;

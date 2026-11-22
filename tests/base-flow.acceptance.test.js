@@ -50,8 +50,8 @@ describe('base-game-framework acceptance', () => {
         };
       });
 
-      assert.deepEqual(view.order, ['start', 'world', 'shop']);
-      assert.deepEqual(view.active, ['start'], 'the shop stays stopped until the gold button opens it');
+      assert.deepEqual(view.order, ['start', 'world']);
+      assert.deepEqual(view.active, ['start'], 'the world stays stopped until the start button is clicked');
       assert.equal(view.background, 0xffffff);
       assert.equal(view.objects.length, 1, 'start scene must only contain the start button');
       assert.equal(view.objects[0].type, 'Text');
@@ -114,19 +114,21 @@ describe('base-game-framework acceptance', () => {
     }
   });
 
-  test('R4/R5 the HUD starts at 648 HP, level 1, 0 gold, 0:00 and stays fixed with mm:ss time', async () => {
+  test('R4/R5 the HUD starts at 648 HP, level 1, 3:00 countdown and stays fixed with mm:ss time', async () => {
     const { page } = await H.openGameWithStart(browser, URL);
     try {
       const state = await H.readGameState(page);
       assert.equal(state.hp, 648);
       assert.equal(state.maxHp, 648);
-      assert.equal(state.gold, 0);
       assert.equal(state.level, 1);
       assert.equal(state.xp, 0);
       assert.equal(state.xpToNext, 280);
-      assert.ok(state.elapsedMs < 2000, 'timer starts at zero when the world starts');
-      assert.equal(state.hud.time, '0:00');
-      assert.equal(state.hud.gold, '0');
+      assert.ok(state.elapsedMs < 2000, 'run time starts at zero when the world starts');
+      assert.ok(
+        state.remainingMs <= 180000 && state.remainingMs > 178000,
+        'the countdown starts at the 180 second goal',
+      );
+      assert.equal(state.hud.time, '3:00');
       assert.equal(state.hud.level, '1');
       assert.equal(state.hud.hp, '648 / 648');
       assert.equal(state.hud.xpRatio, 0);
@@ -144,9 +146,6 @@ describe('base-game-framework acceptance', () => {
           hpX: hud.hpText.x,
           hpOrigin: hud.hpText.originX,
           hpBar: { ...hud.layout.hpBar },
-          goldX: hud.goldText.x,
-          goldY: hud.goldText.y,
-          goldButton: { ...hud.layout.goldButton },
           avatarRadius: hud.layout.avatar.radius,
         };
       });
@@ -154,16 +153,6 @@ describe('base-game-framework acceptance', () => {
       assert.equal(layout.timeY, 20);
       assert.equal(layout.hpX, layout.hpBar.x + layout.hpBar.width / 2);
       assert.equal(layout.hpOrigin, 0.5);
-      assert.ok(
-        layout.goldX > layout.goldButton.x &&
-          layout.goldX < layout.goldButton.x + layout.goldButton.width,
-        'the gold counter sits inside the gold button',
-      );
-      assert.equal(
-        layout.goldY,
-        layout.goldButton.y + layout.goldButton.height / 2,
-        'the gold counter is vertically centred in its button',
-      );
 
       const formatted = await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
@@ -173,10 +162,10 @@ describe('base-game-framework acceptance', () => {
 
       await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
-        scene.elapsedMs = 155000;
-        scene.hud.setTime(scene.formatTime(155000));
+        scene.remainingMs = 145000;
+        scene.hud.setTime(scene.formatTime(145000));
       });
-      assert.equal((await H.readGameState(page)).hud.time, '2:35');
+      assert.equal((await H.readGameState(page)).hud.time, '2:25');
     } finally {
       await H.disposePage(page);
     }
@@ -253,11 +242,10 @@ describe('base-game-framework acceptance', () => {
     }
   });
 
-  test('R7 dart kills add fixed gold and XP while contact damage adds neither', async () => {
+  test('R7 dart kills add fixed XP while contact damage adds none', async () => {
     const { page } = await H.openGameWithStart(browser, URL);
     try {
       const initial = await H.readGameState(page);
-      assert.equal(initial.gold, 0);
       assert.equal(initial.xp, 0);
 
       const reward = await page.evaluate(async () => {
@@ -269,17 +257,13 @@ describe('base-game-framework acceptance', () => {
         zombie.takeDamage(zombie.hp);
         return { ...ZOMBIES.normal.reward };
       });
-      assert.deepEqual(reward, { gold: 21, xp: 60 });
+      assert.deepEqual(reward, { xp: 60 });
       await page.waitForFunction(
-        () => {
-          const scene = window.game.scene.getScene('world');
-          return scene.gold === 21 && scene.xp === 60;
-        },
+        () => window.game.scene.getScene('world').xp === 60,
         null,
         { timeout: 3000, polling: 50 },
       );
       const afterKill = await H.readGameState(page);
-      assert.equal(afterKill.hud.gold, '21');
       assert.equal(afterKill.level, 1);
       assert.ok(Math.abs(afterKill.hud.xpRatio - 60 / 280) < 1e-9);
 
@@ -299,9 +283,7 @@ describe('base-game-framework acceptance', () => {
       );
       await page.waitForTimeout(300);
       const afterContact = await H.readGameState(page);
-      assert.equal(afterContact.gold, 21, 'contact damage must not award gold');
       assert.equal(afterContact.xp, 60, 'contact damage must not award XP');
-      assert.equal(afterContact.hud.gold, '21');
       const stillAlive = await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
         return scene.zombieManager.getLiveZombies().length >= 1;
@@ -318,8 +300,6 @@ describe('base-game-framework acceptance', () => {
       await H.spyOnSounds(page);
       await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
-        scene.gold = 7;
-        scene.hud.setGold(7);
         scene.hp = 1;
         scene.hud.setHp(1, scene.maxHp);
         const zombie = scene.zombieManager.getLiveZombies()[0];
@@ -342,8 +322,8 @@ describe('base-game-framework acceptance', () => {
       assert.equal(later.elapsedMs, frozen.elapsedMs, 'timer must freeze after game over');
       assert.equal(later.hud.time, frozen.hud.time);
 
-      assert.ok(frozen.overlay.includes('本局结束'));
-      assert.ok(frozen.overlay.includes('金钱 7'));
+      assert.ok(frozen.overlay.includes('失败'), 'death ends the run as a defeat');
+      assert.equal(frozen.overlay.some((text) => text.includes('金钱')), false);
       assert.ok(frozen.overlay.some((text) => text.startsWith('存活时间 ')));
       assert.ok(frozen.overlay.includes('再来一局'));
       assert.equal(frozen.overlayAllFixed, true, 'overlay elements must ignore camera scroll');
@@ -361,8 +341,6 @@ describe('base-game-framework acceptance', () => {
       const before = await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
         window.__bgmBefore = scene.sound.get('bgm');
-        scene.gold = 5;
-        scene.hud.setGold(5);
         scene.level = 3;
         scene.xp = 120;
         scene.xpToNext = 460;
@@ -372,10 +350,12 @@ describe('base-game-framework acceptance', () => {
         scene.handlePlayerHit(scene.maxHp);
         return {
           gameOver: scene.gameOver,
+          result: scene.result,
           bgmId: window.__bgmBefore ? window.__bgmBefore.id : null,
         };
       });
       assert.equal(before.gameOver, true);
+      assert.equal(before.result, 'defeat');
       await H.frames(page, 2);
 
       const button = await H.canvasPoint(page, H.GAME_WIDTH / 2, H.GAME_HEIGHT / 2 + 90);
@@ -386,16 +366,18 @@ describe('base-game-framework acceptance', () => {
       assert.equal(after.gameOver, false);
       assert.equal(after.paused, false);
       assert.equal(after.hp, 648);
-      assert.equal(after.gold, 0);
       assert.equal(after.level, 1);
       assert.equal(after.xp, 0);
-      assert.ok(after.elapsedMs < 2000, 'timer restarts from zero');
+      assert.ok(after.elapsedMs < 2000, 'run time restarts from zero');
+      assert.ok(
+        after.remainingMs <= 180000 && after.remainingMs > 178000,
+        'the countdown restarts at the goal',
+      );
       assert.equal(after.hud.hp, '648 / 648');
-      assert.equal(after.hud.gold, '0');
       assert.equal(after.hud.level, '1');
       assert.equal(after.hud.xpRatio, 0);
-      assert.equal(after.hud.time, '0:00');
-      assert.ok(!after.overlay.includes('本局结束'), 'result overlay must be gone');
+      assert.equal(after.hud.time, '3:00');
+      assert.ok(!after.overlay.includes('失败'), 'result overlay must be gone');
       assert.equal(after.bgm.count, 1, 'restart must not create a second BGM instance');
       assert.equal(after.bgm.playing, true);
       const sameInstance = await page.evaluate(

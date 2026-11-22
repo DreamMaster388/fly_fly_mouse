@@ -104,19 +104,19 @@ describe('ui-fade acceptance', () => {
       assert.ok(view.fadedAlpha >= 0.2 && view.fadedAlpha <= 0.5, 'faded UI stays readable');
 
       const hud = panelOf(view, 'hud');
+      assert.equal(hud.regions.length, 3, 'only the bar, timer block and upgrade row fade');
       assert.deepEqual(
         hud.regions[0],
-        { x: 243, y: 598, width: 680, height: 114 },
-        'the bottom bar region matches the shifted HUD layout',
-      );
-      assert.deepEqual(
-        hud.regions[1],
-        { x: 929, y: 598, width: 108, height: 114 },
-        'the trinket/gold panel fades with the bar',
+        { x: 300, y: 598, width: 680, height: 114 },
+        'the bottom bar region is centred',
       );
       assert.ok(
         hud.regions.some((region) => region.x === 24 && region.y === 20),
         'the top-left time block fades as well',
+      );
+      assert.ok(
+        hud.regions.every((region) => region.x + region.width <= 980),
+        'no fade region covers the removed right-hand panel',
       );
 
       const minimap = panelOf(view, 'minimap');

@@ -1,11 +1,9 @@
-import { TRINKETS, WEAPONS } from './config.js';
+import { WEAPONS } from './config.js';
 
 export const MAX_WEAPONS = 6;
-export const MAX_TRINKETS = 6;
 
 export const ITEM_CATEGORY = {
   weapon: 'weapon',
-  trinket: 'trinket',
 };
 
 // Keep the live config objects so tooltips always reflect current weapon stats.
@@ -19,16 +17,10 @@ function registerCategory(category, entries) {
 
 export const ITEMS = {
   ...registerCategory(ITEM_CATEGORY.weapon, WEAPONS),
-  ...registerCategory(ITEM_CATEGORY.trinket, TRINKETS),
 };
 
 export function getItem(id) {
   return ITEMS[id] || null;
-}
-
-/** Trinkets can be bought again; every copy still takes its own slot. */
-export function canRepeat(item) {
-  return !!item && item.category === ITEM_CATEGORY.trinket;
 }
 
 /** Stats of the next weapon level, or null when the item is maxed. */
@@ -92,41 +84,31 @@ export function getDescriptionText(item, stats = item, level = 1) {
     .join('\n');
 }
 
-/** Owned items in acquisition order: weapons fill left-to-right, trinkets too. */
+/** Owned weapons in acquisition order: they fill the six slots left-to-right. */
 export default class Inventory {
-  constructor({ weapons = [], trinkets = [] } = {}, catalog = ITEMS) {
+  constructor({ weapons = [] } = {}, catalog = ITEMS) {
     this.catalog = catalog;
     this.weapons = [];
-    this.trinkets = [];
     for (const id of weapons) this.addItem(id);
-    for (const id of trinkets) this.addItem(id);
-  }
-
-  list(category) {
-    return category === ITEM_CATEGORY.trinket ? this.trinkets : this.weapons;
   }
 
   addItem(id) {
     const item = this.catalog[id];
     if (!item || !this.hasRoom(id)) return false;
 
-    this.list(item.category).push(id);
+    this.weapons.push(id);
     return true;
   }
 
   hasRoom(id) {
     const item = this.catalog[id];
     if (!item) return false;
-
-    const list = this.list(item.category);
-    const max = item.category === ITEM_CATEGORY.trinket ? MAX_TRINKETS : MAX_WEAPONS;
-    if (list.length >= max) return false;
-    return canRepeat(item) || !list.includes(id);
+    if (this.weapons.length >= MAX_WEAPONS) return false;
+    return !this.weapons.includes(id);
   }
 
   count(id) {
-    const matches = (list) => list.filter((entry) => entry === id).length;
-    return matches(this.weapons) + matches(this.trinkets);
+    return this.weapons.filter((entry) => entry === id).length;
   }
 
   hasItem(id) {

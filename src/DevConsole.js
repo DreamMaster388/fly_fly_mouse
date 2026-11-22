@@ -37,10 +37,9 @@ const BUTTONS = [
   { id: 'clear', label: '清空场上敌人' },
   { id: 'hpLock', label: '生命锁定：关' },
   { id: 'heal', label: '回满生命' },
-  { id: 'gold', label: '金钱 +100' },
   { id: 'xp', label: '经验 +500' },
-  { id: 'tier', label: '进入下一难度' },
   { id: 'end', label: '结束本局' },
+  { id: 'win', label: '立即胜利' },
 ];
 
 export default class DevConsole {
@@ -134,20 +133,16 @@ export default class DevConsole {
         this.scene.restoreHp();
         this.setStatus('生命值已回满');
         break;
-      case 'gold':
-        this.scene.addGold(100);
-        this.setStatus(`金钱 +100（当前 ${this.scene.gold}）`);
-        break;
       case 'xp':
         this.scene.addXp(500);
         this.scene.hud.setXp(this.scene.level, this.scene.xp, this.scene.xpToNext);
         this.setStatus(`经验 +500（当前等级 ${this.scene.level}）`);
         break;
-      case 'tier':
-        this.advanceTier();
-        break;
       case 'end':
-        this.scene.endGame();
+        this.scene.endGame('defeat');
+        break;
+      case 'win':
+        this.scene.winGame();
         break;
       default:
         break;
@@ -171,11 +166,6 @@ export default class DevConsole {
     this.setButtonLabel('hpLock', `生命锁定：${locked ? '开' : '关'}`);
     this.setButtonActive('hpLock', locked);
     this.setStatus(locked ? '主角生命已锁定' : '主角生命已解锁');
-  }
-
-  advanceTier() {
-    const tier = this.scene.skipToNextTier();
-    this.setStatus(tier ? `当前难度：${tier.name}` : '已是最高难度');
   }
 
   setStatus(message) {

@@ -1,11 +1,11 @@
 'use strict';
 
 /**
- * Acceptance suite for the purchasable bouncing bomb weapon.
+ * Acceptance suite for the dormant bouncing bomb weapon.
  *
- * B1 the bomb catalogue entry: 600 gold, explosion damage, 10/80/10s base
- *    stats, the eight-step ladder and the level-8 bonus description.
- * B2 the shop sells the bomb once, equips it and removes it from the grid.
+ * B1 the bomb catalogue entry: explosion damage, 10/80/10s base stats, the
+ *    eight-step ladder and the level-8 bonus description.
+ * B2 the bomb mounts directly through the internal entry and fills slot two.
  * B3 the bomb targets the nearest enemy, plays one full 14-frame cherry-bomb
  *    animation over the flight, then deals 10 explosion damage in an 80px radius.
  * B4 at level 8 a 50% roll splits the explosion into one extra bouncing bomb
@@ -28,40 +28,19 @@ async function openWorld(browser) {
   return page;
 }
 
-function waitForShop(page, open) {
-  return page.waitForFunction(
-    (shouldOpen) => {
-      const manager = window.game.scene;
-      return shouldOpen
-        ? manager.isActive('shop') && manager.isPaused('world')
-        : !manager.isActive('shop') && manager.isActive('world');
-    },
-    open,
-    { timeout: 5000, polling: 50 },
-  );
-}
-
-async function openShop(page) {
-  const point = await page.evaluate(() => {
-    const { goldButton } = window.game.scene.getScene('world').hud.layout;
-    return { x: goldButton.x + goldButton.width / 2, y: goldButton.y + goldButton.height / 2 };
-  });
-  const canvasPoint = await H.canvasPoint(page, point.x, point.y);
-  await page.mouse.click(canvasPoint.x, canvasPoint.y);
-  await waitForShop(page, true);
-  await H.frames(page, 2);
-}
-
-async function buyBombDirectly(page) {
+async function mountBombDirectly(page) {
   return page.evaluate(() => {
     const scene = window.game.scene.getScene('world');
-    scene.addGold(1000);
-    const result = scene.purchaseItem('bomb');
+    const added = scene.inventory.addItem('bomb');
+    const weapon = scene.mountWeapon('bomb');
+    scene.hud.refreshItems();
     return {
-      result,
-      gold: scene.gold,
+      added,
       weapons: [...scene.inventory.weapons],
       hasBomb: !!scene.weaponInstances.get('bomb'),
+      level: weapon ? weapon.level : null,
+      damage: weapon ? weapon.config.damage : null,
+      damageType: weapon ? weapon.config.damageType : null,
     };
   });
 }
@@ -101,7 +80,7 @@ describe('bouncing bomb acceptance', () => {
     if (server) await server.close().catch(() => {});
   });
 
-  test('B1 the bomb defines the requested price, damage, ladder and texts', async () => {
+  test('B1 the bomb defines the requested damage, ladder and texts', async () => {
     const page = await openWorld(browser);
     try {
       const data = await page.evaluate(async () => {
@@ -116,7 +95,6 @@ describe('bouncing bomb acceptance', () => {
           base: {
             name: bomb.name,
             category: items.getItem('bomb').category,
-            price: bomb.price,
             damageType: bomb.damageType,
             damage: bomb.damage,
             cooldownMs: bomb.cooldownMs,
@@ -152,7 +130,6 @@ describe('bouncing bomb acceptance', () => {
       assert.deepEqual(data.base, {
         name: '蹦蹦炸弹',
         category: 'weapon',
-        price: 600,
         damageType: 'explosion',
         damage: 10,
         cooldownMs: 10000,
@@ -207,98 +184,29 @@ describe('bouncing bomb acceptance', () => {
     }
   });
 
-  test('B2 the shop sells the bomb once and hides it after purchase', async () => {
+  test('B2 the bomb mounts directly and fills the second weapon slot', async () => {
     const page = await openWorld(browser);
     try {
-      await page.evaluate(() => window.game.scene.getScene('world').addGold(1000));
-      await openShop(page);
-
-      const before = await page.evaluate(() => {
-        const shop = window.game.scene.getScene('shop');
-        const world = window.game.scene.getScene('world');
-        return {
-          category: shop.category,
-          entries: shop.listEntries.map((entry) => entry.id),
-          selectedId: shop.selectedId,
-          buy: shop.buyButton ? { ...shop.buyButton } : null,
-          gold: world.gold,
-        };
-      });
-      assert.equal(before.category, 'weapon');
-      assert.deepEqual(before.entries, ['bomb'], 'only the unowned bomb is listed');
-      assert.equal(before.selectedId, 'bomb');
-      assert.equal(before.buy.itemId, 'bomb');
-      assert.equal(before.buy.enabled, true);
-      assert.equal(before.buy.label, '购买');
-      assert.equal(before.gold, 1000);
-
-      const after = await page.evaluate(() => {
-        const shop = window.game.scene.getScene('shop');
-        const world = window.game.scene.getScene('world');
-        const result = shop.purchase();
-        const texts = [];
-        const collect = (list) => {
-          for (const child of list) {
-            if (typeof child.text === 'string') texts.push(child.text);
-            if (Array.isArray(child.list)) collect(child.list);
-          }
-        };
-        collect(shop.children.list);
-        return {
-          result,
-          gold: world.gold,
-          weapons: [...world.inventory.weapons],
-          entries: shop.listEntries.map((entry) => entry.id),
-          selectedId: shop.selectedId,
-          buy: shop.buyButton,
-          texts,
-          notice: shop.noticeText.text,
-          hudIcon: world.hud.icons.weapon[1]
-            ? {
-                visible: world.hud.icons.weapon[1].visible,
-                texture: world.hud.icons.weapon[1].texture.key,
-              }
-            : null,
-          weapon: (() => {
-            const bomb = world.weaponInstances.get('bomb');
-            return bomb
-              ? { level: bomb.level, damage: bomb.config.damage, damageType: bomb.config.damageType }
-              : null;
-          })(),
-          weaponStock: shop.getShopItems('weapon').map((item) => item.id),
-          trinketStock: shop.getShopItems('trinket').map((item) => item.id),
-        };
-      });
-
-      assert.equal(after.result.ok, true);
-      assert.equal(after.result.item.name, '蹦蹦炸弹');
-      assert.equal(after.gold, 400, 'the bomb costs 600 of the 1000 gold');
-      assert.deepEqual(after.weapons, ['dart', 'bomb']);
-      assert.deepEqual(after.entries, [], 'the owned bomb leaves the shop grid');
-      assert.equal(after.selectedId, null);
-      assert.equal(after.buy, null);
-      assert.ok(after.texts.includes('暂无商品'), 'the emptied weapon tab shows the placeholder');
-      assert.equal(after.notice, '已购买 蹦蹦炸弹');
-      assert.deepEqual(after.hudIcon, { visible: true, texture: 'bomb' });
-      assert.deepEqual(after.weapon, { level: 1, damage: 10, damageType: 'explosion' });
-      assert.deepEqual(after.weaponStock, []);
-      assert.deepEqual(after.trinketStock, ['ruby']);
-
-      await page.evaluate(() => window.game.scene.getScene('shop').close());
-      await waitForShop(page, false);
-      await page.evaluate(() => window.game.scene.getScene('world').openShop());
-      await waitForShop(page, true);
+      await H.removeAllDarts(page);
+      const mounted = await mountBombDirectly(page);
       await H.frames(page, 2);
 
-      const reopened = await page.evaluate(() => {
-        const shop = window.game.scene.getScene('shop');
+      assert.equal(mounted.added, true);
+      assert.deepEqual(mounted.weapons, ['dart', 'bomb']);
+      assert.equal(mounted.hasBomb, true);
+      assert.deepEqual(
+        { level: mounted.level, damage: mounted.damage, damageType: mounted.damageType },
+        { level: 1, damage: 10, damageType: 'explosion' },
+      );
+
+      const hud = await page.evaluate(() => {
+        const icon = window.game.scene.getScene('world').hud.icons.weapon[1];
         return {
-          category: shop.category,
-          selectedId: shop.selectedId,
-          entries: shop.listEntries.map((entry) => entry.id),
+          visible: !!icon && icon.visible,
+          texture: icon ? icon.texture.key : null,
         };
       });
-      assert.deepEqual(reopened, { category: 'trinket', selectedId: 'ruby', entries: ['ruby'] });
+      assert.deepEqual(hud, { visible: true, texture: 'bomb' });
     } finally {
       await H.disposePage(page);
     }
@@ -308,9 +216,8 @@ describe('bouncing bomb acceptance', () => {
     const page = await openWorld(browser);
     try {
       await H.removeAllDarts(page);
-      const purchased = await buyBombDirectly(page);
-      assert.equal(purchased.result.ok, true);
-      assert.equal(purchased.hasBomb, true);
+      const mounted = await mountBombDirectly(page);
+      assert.equal(mounted.hasBomb, true);
 
       await H.spawnTestZombie(page, 400, 400, { maxHp: 30 });
       await H.spawnTestZombie(page, 400, 400, { maxHp: 30 });
@@ -411,8 +318,8 @@ describe('bouncing bomb acceptance', () => {
       await H.removeAllDarts(page);
       const setup = await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
-        scene.addGold(1000);
-        scene.purchaseItem('bomb');
+        scene.inventory.addItem('bomb');
+        scene.mountWeapon('bomb');
         scene.upgradePoints = 7;
         const index = scene.inventory.weapons.indexOf('bomb');
         for (let step = 0; step < 7; step += 1) {
@@ -534,7 +441,7 @@ describe('bouncing bomb acceptance', () => {
     const page = await openWorld(browser);
     try {
       await H.removeAllDarts(page);
-      await buyBombDirectly(page);
+      await mountBombDirectly(page);
 
       const slotPoint = await page.evaluate(() => {
         const slot = window.game.scene.getScene('world').hud.layout.weaponSlots[1];

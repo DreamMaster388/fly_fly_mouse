@@ -5,7 +5,7 @@
  *
  * The console is enabled by CONSOLE.enabled (import.meta.env.DEV) and renders a
  * fixed panel in the top-right corner with buttons that drive the running world
- * scene: spawn/clear enemies, HP lock, heal, gold, XP, tier skip and game over.
+ * scene: spawn/clear enemies, HP lock, heal, XP, defeat and victory.
  */
 
 const { describe, test, before, after } = require('node:test');
@@ -107,20 +107,18 @@ describe('dev console acceptance', () => {
         'clear',
         'hpLock',
         'heal',
-        'gold',
         'xp',
-        'tier',
         'end',
+        'win',
       ]);
       assert.deepEqual(view.labels, [
         '刷出当前敌人',
         '清空场上敌人',
         '生命锁定：关',
         '回满生命',
-        '金钱 +100',
         '经验 +500',
-        '进入下一难度',
         '结束本局',
+        '立即胜利',
       ]);
       assert.equal(view.status, '开发模式 · 仅测试用');
       assert.equal(view.allFixed, true, 'console elements ignore camera scroll');
@@ -201,56 +199,25 @@ describe('dev console acceptance', () => {
     }
   });
 
-  test('C4 gold, XP and tier buttons update the HUD immediately', async () => {
+  test('C4 the XP button updates the HUD immediately', async () => {
     const page = await openWorld(browser);
     try {
-      await clickButton(page, 'gold');
-      await clickButton(page, 'gold');
-      let state = await H.readGameState(page);
-      assert.equal(state.gold, 200);
-      assert.equal(state.hud.gold, '200');
-      assert.match((await readConsole(page)).status, /金钱 \+100（当前 200）/);
-
       await clickButton(page, 'xp');
-      state = await H.readGameState(page);
+      const state = await H.readGameState(page);
       assert.equal(state.level, 2);
       assert.equal(state.xp, 220);
       assert.equal(state.xpToNext, 340);
       assert.equal(state.hud.level, '2');
       assert.ok(Math.abs(state.hud.xpRatio - 220 / 340) < 1e-9);
       assert.match((await readConsole(page)).status, /经验 \+500（当前等级 2）/);
-
-      const tiers = ['白银', '黄金', '翡翠', '钻石', '大师', '王者'];
-      for (const expected of tiers) {
-        await clickButton(page, 'tier');
-        state = await H.readGameState(page);
-        assert.equal(state.tier.name, expected);
-        assert.equal(state.hud.difficulty, `难度 ${expected}`);
-        assert.match((await readConsole(page)).status, new RegExp(`当前难度：${expected}`));
-      }
-
-      state = await H.readGameState(page);
-      assert.ok(
-        state.elapsedMs >= 360000 && state.elapsedMs < 361000,
-        '王者 starts at six minutes',
-      );
-      assert.equal(state.hud.time, '6:00');
-
-      await clickButton(page, 'tier');
-      const capped = await H.readGameState(page);
-      assert.ok(capped.elapsedMs - state.elapsedMs < 1000, 'the highest tier cannot be skipped past');
-      assert.equal(capped.tier.name, '王者');
-      assert.match((await readConsole(page)).status, /已是最高难度/);
     } finally {
       await H.disposePage(page);
     }
   });
 
-  test('C5 end-game button shows the overlay and restart brings back a fresh console', async () => {
+  test('C5 end-game button settles a defeat and restart brings back a fresh console', async () => {
     const page = await openWorld(browser);
     try {
-      await clickButton(page, 'gold');
-
       await clickButton(page, 'end');
       await page.waitForFunction(
         () => window.game.scene.getScene('world').gameOver === true,
@@ -260,8 +227,10 @@ describe('dev console acceptance', () => {
       await H.frames(page, 3);
 
       const over = await H.readGameState(page);
-      assert.ok(over.overlay.includes('本局结束'));
-      assert.ok(over.overlay.includes('金钱 100'));
+      assert.equal(over.result, 'defeat');
+      assert.ok(over.overlay.includes('失败'));
+      assert.equal(over.overlay.some((text) => text.includes('金钱')), false);
+      assert.ok(over.overlay.some((text) => text.startsWith('存活时间 ')));
       assert.equal((await readConsole(page)).visible, false, 'console hides behind the result overlay');
 
       const button = await H.canvasPoint(page, H.GAME_WIDTH / 2, H.GAME_HEIGHT / 2 + 90);
@@ -270,8 +239,9 @@ describe('dev console acceptance', () => {
 
       const after = await H.readGameState(page);
       assert.equal(after.gameOver, false);
-      assert.equal(after.gold, 0);
+      assert.equal(after.result, null);
       assert.equal(after.hp, 648);
+      assert.equal(after.hud.time, '3:00');
 
       const view = await readConsole(page);
       assert.ok(view);
@@ -282,6 +252,35 @@ describe('dev console acceptance', () => {
         await page.evaluate(() => window.game.scene.getScene('world').hpLocked),
         false,
       );
+    } finally {
+      await H.disposePage(page);
+    }
+  });
+
+  test('C6 immediate-victory button wins the run and reports the full survival time', async () => {
+    const page = await openWorld(browser);
+    try {
+      await page.evaluate(() => {
+        const scene = window.game.scene.getScene('world');
+        scene.remainingMs = 90000;
+        scene.hud.setTime(scene.formatTime(scene.remainingMs));
+      });
+      await clickButton(page, 'win');
+      await page.waitForFunction(
+        () => window.game.scene.getScene('world').gameOver === true,
+        null,
+        { timeout: 5000, polling: 50 },
+      );
+      await H.frames(page, 3);
+
+      const over = await H.readGameState(page);
+      assert.equal(over.result, 'victory');
+      assert.equal(over.elapsedMs, 180000, 'the forced victory snaps the run time to the goal');
+      assert.equal(over.remainingMs, 0);
+      assert.equal(over.hud.time, '0:00');
+      assert.ok(over.overlay.includes('胜利'));
+      assert.ok(over.overlay.includes('存活时间 3:00'));
+      assert.equal((await readConsole(page)).visible, false);
     } finally {
       await H.disposePage(page);
     }

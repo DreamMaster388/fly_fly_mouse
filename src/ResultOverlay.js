@@ -1,7 +1,7 @@
 import { FONT_FAMILY } from './fonts.js';
 
 export default class ResultOverlay {
-  constructor(scene, { gold, survivalTime, onRestart }) {
+  constructor(scene, { result, survivalTime, onRestart }) {
     const { width, height } = scene.scale;
     const centerX = width / 2;
     const centerY = height / 2;
@@ -11,22 +11,15 @@ export default class ResultOverlay {
       .rectangle(centerX, centerY, 460, 320, 0xffffff)
       .setStrokeStyle(2, 0x111111);
     const title = scene.add
-      .text(centerX, centerY - 100, '本局结束', {
+      .text(centerX, centerY - 100, result === 'victory' ? '胜利' : '失败', {
         fontFamily: FONT_FAMILY,
         fontSize: '36px',
         fontStyle: 'bold',
         color: '#111111',
       })
       .setOrigin(0.5);
-    const goldText = scene.add
-      .text(centerX, centerY - 30, `金钱 ${gold}`, {
-        fontFamily: FONT_FAMILY,
-        fontSize: '24px',
-        color: '#222222',
-      })
-      .setOrigin(0.5);
     const timeText = scene.add
-      .text(centerX, centerY + 10, `存活时间 ${survivalTime}`, {
+      .text(centerX, centerY - 30, `存活时间 ${survivalTime}`, {
         fontFamily: FONT_FAMILY,
         fontSize: '24px',
         color: '#222222',
@@ -47,7 +40,7 @@ export default class ResultOverlay {
     button.on('pointerout', () => button.setBackgroundColor('#111111'));
     button.on('pointerdown', onRestart);
 
-    const children = [shade, panel, title, goldText, timeText, button];
+    const children = [shade, panel, title, timeText, button];
     for (const child of children) child.setScrollFactor(0);
 
     this.container = scene.add

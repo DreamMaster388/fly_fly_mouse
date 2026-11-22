@@ -261,7 +261,7 @@ export default class ItemTooltip {
       color: '#f0e6d2',
       style: 'bold',
     });
-    this.addText(WIDTH - PADDING, PADDING + 4, item.category === 'trinket' ? '饰品' : '武器', {
+    this.addText(WIDTH - PADDING, PADDING + 4, '武器', {
       size: 12,
       color: '#c8aa6e',
       originX: 1,

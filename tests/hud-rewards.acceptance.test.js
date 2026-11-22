@@ -2,13 +2,12 @@
 
 /**
  * Acceptance suite for the League-of-Legends-style bottom info bar and the
- * gold/XP reward economy. Covers:
+ * XP reward economy. Covers:
  *  - the bar layout (2x2 grid, avatar with XP ring/level badge, six weapon slots
- *    over the HP bar, right-hand trinket grid and gold button) and its
- *    fixed-screen behaviour;
- *  - fixed per-enemy drops (normal zombie: 21 gold / 60 XP);
+ *    over the HP bar) centred on screen and its fixed-screen behaviour;
+ *  - fixed per-enemy XP drops (normal zombie: 60 XP);
  *  - XP accumulation, level-ups against the configured LoL curve and the level cap;
- *  - gold shown in the game-over overlay;
+ *  - the defeat result overlay and a restart clearing the run;
  *  - the circular avatar asset being bundled and served.
  */
 
@@ -55,8 +54,6 @@ describe('hud-rewards acceptance', () => {
         const slotYs = layout.weaponSlots.map((slot) => slot.y);
         const gridXs = [...new Set(layout.grid.slots.map((slot) => slot.x))];
         const gridYs = [...new Set(layout.grid.slots.map((slot) => slot.y))];
-        const trinketXs = [...new Set(layout.trinketSlots.map((slot) => slot.x))];
-        const trinketYs = [...new Set(layout.trinketSlots.map((slot) => slot.y))];
         return {
           screen: { width: scene.scale.width, height: scene.scale.height },
           layout: JSON.parse(JSON.stringify(layout)),
@@ -64,11 +61,9 @@ describe('hud-rewards acceptance', () => {
           slotYs,
           gridXs,
           gridYs,
-          trinketXs,
-          trinketYs,
           inventory: {
             weapons: [...scene.inventory.weapons],
-            trinkets: [...scene.inventory.trinkets],
+            trinkets: scene.inventory.trinkets ?? null,
           },
           weaponIcons: Array.from({ length: layout.weaponSlots.length }, (_, index) => {
             const icon = hud.icons.weapon[index];
@@ -81,24 +76,14 @@ describe('hud-rewards acceptance', () => {
                 }
               : null;
           }),
-          trinketIcons: hud.icons.trinket.filter(Boolean).length,
-          goldInteractive: !!(hud.goldButtonHit && hud.goldButtonHit.input),
-          goldFixed: hud.goldButtonHit.scrollFactorX === 0 && hud.goldButtonHit.scrollFactorY === 0,
           text: {
             time: { x: hud.timeText.x, y: hud.timeText.y, depth: hud.timeText.depth },
-            difficulty: { x: hud.difficultyText.x, y: hud.difficultyText.y },
             hp: {
               x: hud.hpText.x,
               y: hud.hpText.y,
               depth: hud.hpText.depth,
               text: hud.hpText.text,
               origin: hud.hpText.originX,
-            },
-            gold: {
-              x: hud.goldText.x,
-              y: hud.goldText.y,
-              depth: hud.goldText.depth,
-              text: hud.goldText.text,
             },
             level: {
               x: hud.levelText.x,
@@ -107,7 +92,7 @@ describe('hud-rewards acceptance', () => {
               text: hud.levelText.text,
             },
           },
-          fixed: [hud.chrome, hud.hpGraphics, hud.xpGraphics, hud.avatar, hud.hpText, hud.goldText]
+          fixed: [hud.chrome, hud.hpGraphics, hud.xpGraphics, hud.avatar, hud.hpText]
             .map((obj) => obj.scrollFactorX === 0 && obj.scrollFactorY === 0),
           depths: {
             chrome: hud.chrome.depth,
@@ -126,20 +111,13 @@ describe('hud-rewards acceptance', () => {
       const { layout } = view;
       const { width, height } = view.screen;
       assert.ok(
-        Math.abs((layout.bar.x + layout.side.x + layout.side.width) / 2 - width / 2) <= 1,
-        'the bar and the item panel are centred as one group',
+        Math.abs(layout.bar.x + layout.bar.width / 2 - width / 2) <= 1,
+        'the bar is centred on screen',
       );
+      assert.equal(layout.bar.x, (width - layout.bar.width) / 2, 'the bar sits on the centre axis');
       assert.equal(layout.bar.y + layout.bar.height, height - 8, 'bar hugs the bottom edge');
-      assert.ok(layout.bar.x < 300, 'the bar shifts left to make room for the item panel');
-      assert.equal(
-        layout.side.x,
-        layout.bar.x + layout.bar.width + 6,
-        'the item panel attaches to the right edge of the bar',
-      );
-      assert.ok(
-        layout.side.x + layout.side.width < 1048,
-        'the item panel stays clear of the minimap',
-      );
+      assert.equal(layout.side, undefined, 'the right-hand item panel is gone');
+      assert.equal(layout.trinketSlots, undefined, 'the trinket grid is gone');
 
       assert.equal(layout.grid.slots.length, 4, 'the far-left placeholder is a 2x2 grid');
       assert.equal(view.gridXs.length, 2);
@@ -169,8 +147,8 @@ describe('hud-rewards acceptance', () => {
 
       assert.deepEqual(
         view.inventory,
-        { weapons: ['dart'], trinkets: [] },
-        'the run starts with the spinning dart and no trinkets',
+        { weapons: ['dart'], trinkets: null },
+        'the run starts with only the spinning dart and no trinket inventory',
       );
       assert.deepEqual(
         view.weaponIcons[0],
@@ -188,35 +166,6 @@ describe('hud-rewards acceptance', () => {
         'the other weapon slots stay empty',
       );
 
-      assert.equal(layout.trinketSlots.length, 6, 'the item panel holds six trinket slots');
-      assert.equal(view.trinketXs.length, 3, 'trinkets use three columns');
-      assert.equal(view.trinketYs.length, 2, 'trinkets use two rows');
-      assert.ok(
-        layout.trinketSlots.every(
-          (slot) =>
-            slot.x > layout.side.x &&
-            slot.x + slot.size < layout.side.x + layout.side.width &&
-            slot.y > layout.side.y &&
-            slot.y + slot.size < layout.side.y + layout.side.height,
-        ),
-        'every trinket slot fits inside the item panel',
-      );
-      const trinketColumns = [...view.trinketXs].sort((a, b) => a - b);
-      const trinketRows = [...view.trinketYs].sort((a, b) => a - b);
-      assert.deepEqual(
-        layout.trinketSlots.map((slot) => [slot.x, slot.y]),
-        [
-          [trinketColumns[0], trinketRows[0]],
-          [trinketColumns[1], trinketRows[0]],
-          [trinketColumns[2], trinketRows[0]],
-          [trinketColumns[0], trinketRows[1]],
-          [trinketColumns[1], trinketRows[1]],
-          [trinketColumns[2], trinketRows[1]],
-        ],
-        'trinkets fill left-to-right, then top-to-bottom',
-      );
-      assert.equal(view.trinketIcons, 0, 'no trinket icons render while none are owned');
-
       assert.ok(layout.hpBar.y >= view.slotYs[0] + layout.weaponSlots[0].size, 'HP sits under the slots');
       assert.equal(layout.hpBar.x, layout.weaponSlots[0].x, 'HP bar aligns with the slot row');
       assert.equal(
@@ -225,41 +174,17 @@ describe('hud-rewards acceptance', () => {
         'HP bar spans the slot row',
       );
 
-      assert.equal(layout.goldButton.x, layout.side.x + 8, 'the gold button aligns inside the panel');
-      assert.ok(
-        layout.goldButton.y > layout.trinketSlots[4].y,
-        'the gold button sits under the trinket grid',
-      );
-      assert.ok(
-        layout.goldButton.y + layout.goldButton.height < layout.side.y + layout.side.height,
-        'the gold button fits inside the panel',
-      );
-      assert.ok(
-        view.text.gold.x > layout.goldButton.x &&
-          view.text.gold.x < layout.goldButton.x + layout.goldButton.width,
-        'the gold counter sits inside the gold button',
-      );
-      assert.equal(
-        view.text.gold.y,
-        layout.goldButton.y + layout.goldButton.height / 2,
-        'the gold counter is vertically centred in the button',
-      );
-      assert.equal(view.goldInteractive, true, 'the gold button is clickable');
-      assert.equal(view.goldFixed, true, 'the gold button ignores camera scroll');
+      assert.equal(layout.goldButton, undefined, 'the HUD no longer has a gold button');
 
       assert.ok(view.text.hp.y > layout.bar.y, 'HP moved into the bottom bar');
-      assert.ok(view.text.gold.y > layout.bar.y, 'gold lives inside the bottom bar');
       assert.equal(view.text.hp.text, '648 / 648');
-      assert.equal(view.text.gold.text, '0');
       assert.equal(view.text.level.text, '1');
       assert.equal(view.text.hp.origin, 0.5, 'HP text is centred on the bar');
       assert.equal(view.text.time.y, 20);
-      assert.equal(view.text.difficulty.y, 54);
 
       assert.ok(view.fixed.every(Boolean), 'all bottom-bar elements ignore camera scroll');
       assert.deepEqual(view.depths, { chrome: 1000, hpGraphics: 1001, xpGraphics: 1001 });
       assert.equal(view.text.hp.depth, 1002);
-      assert.equal(view.text.gold.depth, 1002);
       assert.equal(view.text.level.depth, 1002);
 
       assert.equal(view.avatar.texture, 'player-avatar');
@@ -279,7 +204,7 @@ describe('hud-rewards acceptance', () => {
     }
   });
 
-  test('H2 every kill drops the fixed 21 gold / 60 XP and updates the HUD', async () => {
+  test('H2 every kill drops fixed XP and updates the HUD', async () => {
     const { page } = await openWorld(browser);
     try {
       const config = await page.evaluate(async () => {
@@ -289,31 +214,26 @@ describe('hud-rewards acceptance', () => {
       const types = Object.values(config);
       assert.ok(types.length >= 1);
       for (const type of types) {
-        assert.equal(Number.isInteger(type.reward.gold), true, `${type.name} gold is fixed`);
         assert.equal(Number.isInteger(type.reward.xp), true, `${type.name} XP is fixed`);
-        assert.ok(type.reward.gold > 0);
         assert.ok(type.reward.xp > 0);
+        assert.equal('gold' in type.reward, false, `${type.name} no longer drops gold`);
       }
-      assert.deepEqual(config.normal.reward, { gold: 21, xp: 60 });
+      assert.deepEqual(config.normal.reward, { xp: 60 });
 
       const initial = await page.evaluate(() => {
         const scene = window.game.scene.getScene('world');
         return {
-          gold: scene.gold,
           xp: scene.xp,
           ringCommands: scene.hud.xpGraphics.commandBuffer.length,
         };
       });
-      assert.equal(initial.gold, 0);
       assert.equal(initial.xp, 0);
       assert.equal(initial.ringCommands, 0, 'the XP ring is empty at zero XP');
 
       const first = await H.spawnTestZombie(page, 400, 400, { maxHp: 10 });
       await killZombie(page, first);
       let state = await H.readGameState(page);
-      assert.equal(state.gold, 21);
       assert.equal(state.xp, 60);
-      assert.equal(state.hud.gold, '21');
       assert.equal(state.hud.level, '1');
       assert.ok(Math.abs(state.hud.xpRatio - 60 / 280) < 1e-9);
 
@@ -325,9 +245,7 @@ describe('hud-rewards acceptance', () => {
       const second = await H.spawnTestZombie(page, 450, 400, { maxHp: 10 });
       await killZombie(page, second);
       state = await H.readGameState(page);
-      assert.equal(state.gold, 42, 'gold accumulates per kill');
       assert.equal(state.xp, 120, 'XP accumulates per kill');
-      assert.equal(state.hud.gold, '42');
       assert.ok(Math.abs(state.hud.xpRatio - 120 / 280) < 1e-9);
     } finally {
       await H.disposePage(page);
@@ -352,7 +270,6 @@ describe('hud-rewards acceptance', () => {
       assert.equal(state.xpToNext, 340, 'level 2 requires the next LoL threshold');
       assert.equal(state.hud.level, '2');
       assert.ok(Math.abs(state.hud.xpRatio - 50 / 340) < 1e-9);
-      assert.equal(state.gold, 21);
 
       const badge = await page.evaluate(() => {
         const hud = window.game.scene.getScene('world').hud;
@@ -398,7 +315,7 @@ describe('hud-rewards acceptance', () => {
     }
   });
 
-  test('H4 accumulated gold is reported on the result overlay and cleared by a restart', async () => {
+  test('H4 the result overlay reports the defeat and a restart clears the run', async () => {
     const { page } = await openWorld(browser);
     try {
       const first = await H.spawnTestZombie(page, 400, 400, { maxHp: 10 });
@@ -407,7 +324,6 @@ describe('hud-rewards acceptance', () => {
       await killZombie(page, second);
 
       const before = await H.readGameState(page);
-      assert.equal(before.gold, 42);
       assert.equal(before.xp, 120);
 
       await page.evaluate(() => {
@@ -422,8 +338,10 @@ describe('hud-rewards acceptance', () => {
       await H.frames(page, 3);
 
       const over = await H.readGameState(page);
-      assert.ok(over.overlay.includes('本局结束'));
-      assert.ok(over.overlay.includes('金钱 42'), 'the overlay reports the accumulated gold');
+      assert.equal(over.result, 'defeat');
+      assert.ok(over.overlay.includes('失败'));
+      assert.ok(over.overlay.some((text) => text.startsWith('存活时间 ')));
+      assert.equal(over.overlay.some((text) => text.includes('金钱')), false, 'the result no longer reports gold');
       assert.equal(over.overlay.some((text) => text.includes('分数')), false, 'the score system is gone');
       assert.equal(over.overlayAllFixed, true);
 
@@ -433,13 +351,12 @@ describe('hud-rewards acceptance', () => {
 
       const after = await H.readGameState(page);
       assert.equal(after.gameOver, false);
-      assert.equal(after.gold, 0);
       assert.equal(after.level, 1);
       assert.equal(after.xp, 0);
-      assert.equal(after.hud.gold, '0');
       assert.equal(after.hud.level, '1');
       assert.equal(after.hud.hp, '648 / 648');
-      assert.ok(!after.overlay.includes('本局结束'));
+      assert.equal(after.hud.time, '3:00');
+      assert.ok(!after.overlay.includes('失败'));
     } finally {
       await H.disposePage(page);
     }

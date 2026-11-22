@@ -3,7 +3,7 @@
 /**
  * Independent acceptance suite for the fixed-loadout and population change.
  *
- * F1 普通僵尸 keeps fixed stats (30 speed, 10 HP, population cost 1) at every tier.
+ * F1 普通僵尸 keeps fixed stats (30 speed, 10 HP, population cost 1).
  * F2 a global population pool of 25 replaces per-enemy alive caps.
  * F3 旋转飞镖 keeps fixed stats (2 damage, 8 slots, 0 at start, +1 per second).
  * F4 darts deal their fixed damage through the normal overlap path.
@@ -38,10 +38,10 @@ describe('fixed loadout and population acceptance', () => {
     if (server) await server.close().catch(() => {});
   });
 
-  test('F1/F3 普通僵尸 and 旋转飞镖 keep the same fixed stats at 青铜 and 王者', async () => {
+  test('F1/F3 普通僵尸 and 旋转飞镖 keep their fixed stats', async () => {
     const page = await openWorld(browser);
     try {
-      const bronze = await page.evaluate(async () => {
+      const data = await page.evaluate(async () => {
         const { WEAPONS, ZOMBIES, GAMEPLAY } = await import('/src/config.js');
         const scene = window.game.scene.getScene('world');
         scene.zombieManager.spawn();
@@ -58,48 +58,27 @@ describe('fixed loadout and population acceptance', () => {
             slots: scene.weaponOrbit.slots.length,
             active: scene.weaponOrbit.getActiveDarts().length,
           },
-          tier: scene.difficulty.tier.name,
         };
       });
 
-      assert.equal(bronze.tier, '青铜');
-      assert.equal(bronze.maxPopulation, 25);
-      assert.equal(bronze.weapon.name, '旋转飞镖');
-      assert.equal(bronze.weapon.damage, 2);
-      assert.equal(bronze.weapon.slotCount, 8);
-      assert.equal(bronze.weapon.initialCount, 0);
-      assert.equal(bronze.weapon.refillIntervalMs, 1000);
-      assert.equal(bronze.zombie.name, '普通僵尸');
-      assert.equal(bronze.zombie.speed, 30);
-      assert.equal(bronze.zombie.maxHp, 10);
-      assert.equal(bronze.zombie.populationCost, 1);
-      assert.deepEqual(bronze.spawned, { speed: 30, hp: 10 });
-      assert.deepEqual(bronze.orbit, {
+      assert.equal(data.maxPopulation, 25);
+      assert.equal(data.weapon.name, '旋转飞镖');
+      assert.equal(data.weapon.damage, 2);
+      assert.equal(data.weapon.slotCount, 8);
+      assert.equal(data.weapon.initialCount, 0);
+      assert.equal(data.weapon.refillIntervalMs, 1000);
+      assert.equal(data.zombie.name, '普通僵尸');
+      assert.equal(data.zombie.speed, 30);
+      assert.equal(data.zombie.maxHp, 10);
+      assert.equal(data.zombie.populationCost, 1);
+      assert.deepEqual(data.spawned, { speed: 30, hp: 10 });
+      assert.deepEqual(data.orbit, {
         damage: 2,
         interval: 1000,
         timer: 1000,
         slots: 8,
         active: 0,
       });
-
-      await H.setTierByElapsed(page, 360000);
-      const king = await page.evaluate(() => {
-        const scene = window.game.scene.getScene('world');
-        scene.zombieManager.spawn();
-        const zombie = scene.zombieManager.getLiveZombies().slice(-1)[0];
-        return {
-          tier: scene.difficulty.tier.name,
-          spawned: zombie ? { speed: zombie.speed, hp: zombie.hp } : null,
-          orbit: {
-            damage: scene.weaponOrbit.config.damage,
-            interval: scene.weaponOrbit.refillIntervalMs,
-            timer: scene.weaponOrbit.refillTimer.delay,
-          },
-        };
-      });
-      assert.equal(king.tier, '王者');
-      assert.deepEqual(king.spawned, { speed: 30, hp: 10 });
-      assert.deepEqual(king.orbit, { damage: 2, interval: 1000, timer: 1000 });
     } finally {
       await H.disposePage(page);
     }
@@ -299,7 +278,6 @@ describe('fixed loadout and population acceptance', () => {
         window.__despawnProbe = { near, far };
         return {
           despawnDistance,
-          gold: scene.gold,
           xp: scene.xp,
           level: scene.level,
           population: scene.population.used,
@@ -321,7 +299,6 @@ describe('fixed loadout and population acceptance', () => {
           farArtActive: !!(far.art && far.art.container.active),
           alive: scene.zombieManager.getLiveZombies().length,
           population: scene.population.used,
-          gold: scene.gold,
           xp: scene.xp,
           level: scene.level,
         };
@@ -333,9 +310,9 @@ describe('fixed loadout and population acceptance', () => {
       assert.equal(afterCull.alive, 1);
       assert.equal(afterCull.population, 1, 'the culled enemy frees its population slot');
       assert.deepEqual(
-        { gold: afterCull.gold, xp: afterCull.xp, level: afterCull.level },
-        { gold: setup.gold, xp: setup.xp, level: setup.level },
-        'the cull awards no gold or XP',
+        { xp: afterCull.xp, level: afterCull.level },
+        { xp: setup.xp, level: setup.level },
+        'the cull awards no XP',
       );
 
       const respawn = await page.evaluate(() => {

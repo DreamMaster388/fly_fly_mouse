@@ -119,7 +119,6 @@ describe('locust death explosion acceptance', () => {
       const touched = await H.readGameState(page);
       const corpse = await H.readTestLocust(page, index);
       assert.equal(touched.hp, before.hp, 'touching a locust no longer deals 10');
-      assert.equal(touched.gold, before.gold, 'self-destruct pays no gold');
       assert.equal(touched.xp, before.xp, 'self-destruct pays no XP');
       assert.equal(touched.population.used, before.population.used, 'the slot frees instantly');
       assert.equal(touched.aliveZombies, 0);

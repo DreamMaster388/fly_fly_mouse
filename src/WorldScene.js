@@ -4,7 +4,6 @@ import WeaponOrbit from './WeaponOrbit.js';
 import BombWeapon from './BombWeapon.js';
 import ZombieManager from './ZombieManager.js';
 import Combat from './Combat.js';
-import Difficulty from './Difficulty.js';
 import Population from './Population.js';
 import Hud from './Hud.js';
 import ResultOverlay from './ResultOverlay.js';
@@ -14,13 +13,11 @@ import Minimap from './Minimap.js';
 import UiFade from './UiFade.js';
 import Slimes from './Slimes.js';
 import Inventory, {
-  canRepeat,
   getItem,
-  ITEM_CATEGORY,
   nextUpgradeStats,
 } from './items.js';
 import { SPAWN, WORLD } from './mapLayout.js';
-import { AUDIO, CONSOLE, DOGS, GAMEPLAY, LOCUSTS, MAX_WEAPON_LEVEL, TRINKETS, WEAPONS, ZOMBIES } from './config.js';
+import { AUDIO, CONSOLE, DOGS, GAMEPLAY, LOCUSTS, MAX_WEAPON_LEVEL, WEAPONS, ZOMBIES } from './config.js';
 import { ZOMBIE_ARM_BONE_ASSET, ZOMBIE_PART_ASSETS } from './zombieArtAssets.js';
 import { ZOMBIE_CHARRED_ASSETS } from './zombieCharredAssets.js';
 import playerTextureUrl from '../resource/character/飞飞鼠完整-透明.png';
@@ -56,10 +53,6 @@ export default class WorldScene extends Phaser.Scene {
         this.load.image(weapon.explosion.textureKey, weapon.explosion.textureUrl);
       }
     }
-    for (const trinket of Object.values(TRINKETS)) {
-      this.load.image(trinket.textureKey, trinket.textureUrl);
-    }
-
     for (const asset of ZOMBIE_PART_ASSETS) {
       this.load.image(asset.key, asset.url);
     }
@@ -115,19 +108,18 @@ export default class WorldScene extends Phaser.Scene {
     this.physics.resume();
     this.hp = GAMEPLAY.initialHp;
     this.maxHp = GAMEPLAY.initialHp;
-    this.gold = 0;
     this.level = GAMEPLAY.initialLevel;
     this.xp = 0;
     this.xpToNext = GAMEPLAY.levelXp[this.level - 1];
     this.elapsedMs = 0;
+    this.remainingMs = GAMEPLAY.survivalGoalMs;
     this.gameOver = false;
+    this.result = null;
     this.hpLocked = false;
-    this.shopOpen = false;
     this.slimeStacks = 0;
     this.inventory = new Inventory({ weapons: ['dart'] });
     this.weaponLevels = { dart: 1 };
     this.upgradePoints = 0;
-    this.difficulty = new Difficulty();
 
     this.cameras.main.setBackgroundColor(0x2a2118);
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -158,12 +150,10 @@ export default class WorldScene extends Phaser.Scene {
       level: this.level,
       xp: this.xp,
       xpToNext: this.xpToNext,
-      gold: this.gold,
       inventory: this.inventory,
     });
     this.hud.setHp(this.hp, this.maxHp);
-    this.hud.setTime(this.formatTime(this.elapsedMs));
-    this.hud.setDifficulty(this.difficulty.tier.name, this.difficulty.tier.color);
+    this.hud.setTime(this.formatCountdown(this.remainingMs));
     this.minimap = new Minimap(this);
 
     const slimeConfig = LOCUSTS.locust.slime;
@@ -235,27 +225,13 @@ export default class WorldScene extends Phaser.Scene {
     this.minimap.update(this.player, this.zombieManager.zombies);
     this.uiFade.update(delta);
 
+    if (this.gameOver) return;
+
     this.elapsedMs += delta;
-    this.hud.setTime(this.formatTime(this.elapsedMs));
+    this.remainingMs = Math.max(0, this.remainingMs - delta);
+    this.hud.setTime(this.formatCountdown(this.remainingMs));
 
-    if (this.difficulty.update(this.elapsedMs)) this.applyDifficulty();
-  }
-
-  applyDifficulty() {
-    this.hud.setDifficulty(this.difficulty.tier.name, this.difficulty.tier.color);
-  }
-
-  openShop() {
-    if (this.gameOver || this.shopOpen) return false;
-
-    this.shopOpen = true;
-    if (this.hud) this.hud.hideItemTooltip();
-    this.scene.launch('shop');
-    this.scene.pause();
-    this.events.once(Phaser.Scenes.Events.RESUME, () => {
-      this.shopOpen = false;
-    });
-    return true;
+    if (this.remainingMs <= 0) this.winGame();
   }
 
   handlePlayerHit(amount) {
@@ -316,15 +292,8 @@ export default class WorldScene extends Phaser.Scene {
   }
 
   handleZombieKilled(zombie) {
-    const { gold, xp } = zombie.config.reward;
-    this.addGold(gold);
-    this.addXp(xp);
+    this.addXp(zombie.config.reward.xp);
     this.hud.setXp(this.level, this.xp, this.xpToNext);
-  }
-
-  addGold(amount) {
-    this.gold += amount;
-    this.hud.setGold(this.gold);
   }
 
   restoreHp() {
@@ -335,19 +304,6 @@ export default class WorldScene extends Phaser.Scene {
   toggleHpLock() {
     this.hpLocked = !this.hpLocked;
     return this.hpLocked;
-  }
-
-  skipToNextTier() {
-    if (this.gameOver) return null;
-
-    const nextMs = this.difficulty.nextTierStartMs(this.elapsedMs);
-    if (nextMs === null) return null;
-
-    this.elapsedMs = nextMs;
-    this.difficulty.update(nextMs);
-    this.applyDifficulty();
-    this.hud.setTime(this.formatTime(nextMs));
-    return this.difficulty.tier;
   }
 
   addXp(amount) {
@@ -365,31 +321,6 @@ export default class WorldScene extends Phaser.Scene {
       this.upgradePoints += levelsGained;
       if (this.hud) this.hud.refreshItems();
     }
-  }
-
-  /** Spends gold, stores the item and applies its permanent effects. */
-  purchaseItem(id) {
-    if (this.gameOver) return { ok: false, reason: 'closed' };
-
-    const item = getItem(id);
-    if (!item || !Number.isFinite(item.price)) return { ok: false, reason: 'missing' };
-    if (!canRepeat(item) && this.inventory.hasItem(id)) return { ok: false, reason: 'owned' };
-    if (this.gold < item.price) return { ok: false, reason: 'gold' };
-    if (!this.inventory.addItem(id)) return { ok: false, reason: 'full' };
-
-    this.gold -= item.price;
-    this.applyItemEffects(item);
-    if (item.category === ITEM_CATEGORY.weapon) this.mountWeapon(id);
-    this.hud.setGold(this.gold);
-    this.hud.setHp(this.hp, this.maxHp);
-    this.hud.refreshItems();
-    return { ok: true, item };
-  }
-
-  applyItemEffects(item) {
-    const effects = item.effects || {};
-    if (effects.maxHp) this.maxHp += effects.maxHp;
-    if (effects.hp) this.hp = Math.min(this.maxHp, this.hp + effects.hp);
   }
 
   getWeaponStats(id) {
@@ -421,20 +352,41 @@ export default class WorldScene extends Phaser.Scene {
     return true;
   }
 
-  endGame() {
+  endGame(result = 'defeat') {
+    if (this.gameOver) return;
+
     this.gameOver = true;
+    this.result = result;
     this.zombieManager.stop();
     this.physics.pause();
     if (this.devConsole) this.devConsole.setVisible(false);
+    const survivalMs =
+      result === 'victory' ? GAMEPLAY.survivalGoalMs : this.elapsedMs;
     new ResultOverlay(this, {
-      gold: this.gold,
-      survivalTime: this.formatTime(this.elapsedMs),
+      result,
+      survivalTime: this.formatTime(survivalMs),
       onRestart: () => this.scene.restart(),
     });
   }
 
+  winGame() {
+    if (this.gameOver || this.hp <= 0) return;
+
+    this.remainingMs = 0;
+    this.elapsedMs = GAMEPLAY.survivalGoalMs;
+    this.hud.setTime(this.formatCountdown(0));
+    this.endGame('victory');
+  }
+
   formatTime(ms) {
     const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  formatCountdown(ms) {
+    const totalSeconds = Math.ceil(Math.max(0, ms) / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
