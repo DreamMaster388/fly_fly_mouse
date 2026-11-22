@@ -196,7 +196,7 @@ describe('slime stacks acceptance', () => {
 
       const state = await H.readGameState(page);
       assert.equal(state.gameOver, true);
-      assert.ok(state.overlay.includes('本局结束'), 'the existing game-over overlay appears');
+      assert.ok(state.overlay.includes('失败'), 'the defeat overlay appears');
 
       const dead = await H.readSlimeDotState(page);
       assert.equal(dead.hp, 0);

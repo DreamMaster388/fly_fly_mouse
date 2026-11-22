@@ -274,7 +274,7 @@ describe('dog acceptance', () => {
     }
   });
 
-  test('D5 a weapon kill pays 200 gold and 400 XP, then fades without effects', async () => {
+  test('D5 a weapon kill pays 400 XP, then fades without effects', async () => {
     const { page } = await openWorld(browser);
     try {
       await H.spyOnSounds(page);
@@ -290,7 +290,6 @@ describe('dog acceptance', () => {
       assert.equal(corpse.active, true, 'the dog fades instead of vanishing');
 
       const paid = await H.readGameState(page);
-      assert.equal(paid.gold, before.gold + 200);
       assert.equal(paid.level, 2, '400 XP is enough for the first level');
       assert.equal(paid.xp, 120);
       assert.equal(paid.population.used, before.population.used);
@@ -317,7 +316,6 @@ describe('dog acceptance', () => {
 
       const hit = await H.readGameState(page);
       assert.equal(hit.hp, before.hp - 200);
-      assert.equal(hit.gold, before.gold, 'contact death pays no gold');
       assert.equal(hit.xp, before.xp, 'contact death pays no XP');
       assert.equal(hit.population.used, before.population.used);
       assert.equal(hit.aliveZombies, 0);
@@ -599,7 +597,6 @@ describe('dog acceptance', () => {
       await waitForDogDead(page, index);
       const hit = await H.readGameState(page);
       assert.equal(hit.hp, before.hp - 200);
-      assert.equal(hit.gold, before.gold);
       assert.equal(hit.xp, before.xp);
       assert.equal((await H.readTestDog(page, index)).selfDestructed, true);
     } finally {
@@ -723,7 +720,6 @@ describe('dog acceptance', () => {
         } else {
           assert.equal(hit.hp, before.hp - 200);
         }
-        assert.equal(hit.gold, before.gold, `contact in ${phase} pays no gold`);
         assert.equal(hit.xp, before.xp, `contact in ${phase} pays no XP`);
         assert.equal((await H.readSlimes(page)).length, 0);
 
@@ -745,11 +741,9 @@ describe('dog acceptance', () => {
       const firstDog = await H.spawnTestDog(page, DOG.x, DOG.y, { speed: 0 });
       await waitForDogPhase(page, firstDog, 'wait', 6000);
       await waitForLocustAnim(page, locust, 'locust-angry-walk', 4000);
-      const before = await H.readGameState(page);
 
       await H.callTestDog(page, firstDog, 'takeDamage', 9999);
       const first = await H.readGameState(page);
-      assert.equal(first.gold, before.gold + 200);
       assert.equal(first.level, 2);
       assert.equal(first.xp, 120);
 
@@ -762,11 +756,9 @@ describe('dog acceptance', () => {
 
       const secondDog = await H.spawnTestDog(page, DOG.x, DOG.y, { speed: 0 });
       await waitForDogPhase(page, secondDog, 'angry', 9000);
-      const mid = await H.readGameState(page);
 
       await H.callTestDog(page, secondDog, 'takeDamage', 9999);
       const second = await H.readGameState(page);
-      assert.equal(second.gold, mid.gold + 200);
       assert.equal(second.level, 3);
       assert.equal(second.xp, 180);
 

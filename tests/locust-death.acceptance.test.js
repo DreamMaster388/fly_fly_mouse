@@ -125,7 +125,7 @@ describe('locust death animation acceptance', () => {
     }
   });
 
-  test('D2 gold, XP and the population slot are settled at the death instant', async () => {
+  test('D2 XP and the population slot are settled at the death instant', async () => {
     const { page } = await openWorld(browser);
     try {
       const before = await H.readGameState(page);
@@ -137,7 +137,6 @@ describe('locust death animation acceptance', () => {
       const after = await H.readGameState(page);
       const corpse = await H.readTestLocust(page, index);
 
-      assert.equal(after.gold, before.gold + 10, 'the locust drops its 10 gold');
       assert.equal(after.level, before.level);
       assert.equal(after.xp, before.xp + 30, 'the locust grants its 30 XP');
       assert.equal(after.population.used, before.population.used, 'the slot frees instantly');
@@ -176,7 +175,7 @@ describe('locust death animation acceptance', () => {
       const corpse = await H.readTestLocust(page, index);
       assert.equal(corpse.hp, 0, 'the corpse cannot be damaged again');
       assert.equal(corpse.dead, true);
-      assert.equal((await H.readGameState(page)).gold, before.gold + 10, 'no double reward');
+      assert.equal((await H.readGameState(page)).xp, before.xp + 30, 'no double reward');
     } finally {
       await H.disposePage(page);
     }

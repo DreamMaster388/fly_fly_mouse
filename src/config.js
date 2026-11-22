@@ -23,13 +23,13 @@ import zombieHitSoundUrl from '../resource/audio/zombie-hit.mp3';
 import zombieDieSoundUrl from '../resource/audio/zombie-die.mp3';
 import chompSoundUrl from '../resource/audio/chomp.mp3';
 import bgmSoundUrl from '../resource/audio/2.75.mp3';
-import rubyTextureUrl from '../resource/item/ruby.png';
 
 export const GAMEPLAY = {
   initialHp: 648,
   maxPopulation: 25,
   initialLevel: 1,
   maxLevel: 18,
+  survivalGoalMs: 180000,
   levelXp: [
     280, 340, 460, 640, 860, 1140, 1480, 1880, 2360, 2920, 3560, 4280, 5080, 5960, 6920, 7960, 9080,
   ],
@@ -116,7 +116,6 @@ export const WEAPONS = {
     mechanic: 'bomb',
     textureKey: 'bomb',
     textureUrl: bombTextureUrl,
-    price: 600,
     damageType: DAMAGE_TYPES.explosion,
     damage: 10,
     cooldownMs: 10000,
@@ -184,21 +183,6 @@ export const WEAPONS = {
   },
 };
 
-export const TRINKETS = {
-  ruby: {
-    name: '红宝石',
-    textureKey: 'ruby',
-    textureUrl: rubyTextureUrl,
-    price: 100,
-    description: ['生命与最大生命+10。'],
-    flavor: '这个加血，这个厉害。',
-    effects: {
-      hp: 10,
-      maxHp: 10,
-    },
-  },
-};
-
 export const ZOMBIES = {
   normal: {
     name: '普通僵尸',
@@ -206,7 +190,6 @@ export const ZOMBIES = {
     speed: 30,
     maxHp: 10,
     reward: {
-      gold: 21,
       xp: 60,
     },
     spawnIntervalMs: 2000,
@@ -319,7 +302,6 @@ export const LOCUSTS = {
     injuredSpeedMultiplier: 1.2,
     enrageSpeedMultiplier: 2,
     reward: {
-      gold: 10,
       xp: 30,
     },
     spawnChance: 0.2,
@@ -445,7 +427,6 @@ export const DOGS = {
     howlWaitMs: 2000,
     enrageSpeedMultiplier: 3,
     reward: {
-      gold: 200,
       xp: 400,
     },
     spawnChance: 0.1,

@@ -15,15 +15,12 @@
 
 require('./base-flow.acceptance.test.js');
 require('./weapon-damage.acceptance.test.js');
-require('./difficulty.acceptance.test.js');
 require('./loadout-population.acceptance.test.js');
 require('./enemy-collision.acceptance.test.js');
 require('./hud-rewards.acceptance.test.js');
 require('./dev-console.acceptance.test.js');
 require('./map.acceptance.test.js');
 require('./ui-fade.acceptance.test.js');
-require('./items-shop.acceptance.test.js');
-require('./shop-catalog.acceptance.test.js');
 require('./weapon-upgrade.acceptance.test.js');
 require('./bomb-weapon.acceptance.test.js');
 require('./explosion-death.acceptance.test.js');
@@ -34,3 +31,4 @@ require('./slime-dot.acceptance.test.js');
 require('./locust-enrage.acceptance.test.js');
 require('./locust-enraged-explosion.acceptance.test.js');
 require('./dog.acceptance.test.js');
+require('./survival.acceptance.test.js');

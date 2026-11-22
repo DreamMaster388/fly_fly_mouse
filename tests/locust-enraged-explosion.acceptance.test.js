@@ -129,7 +129,6 @@ describe('enraged locust explosion acceptance', () => {
 
       const touched = await H.readGameState(page);
       assert.equal(touched.hp, before.hp, 'contact itself deals no damage');
-      assert.equal(touched.gold, before.gold, 'self-destruct pays no gold');
       assert.equal(touched.xp, before.xp, 'self-destruct pays no XP');
       assert.equal(touched.population.used, before.population.used, 'the slot frees instantly');
       assert.equal(touched.aliveZombies, 0);

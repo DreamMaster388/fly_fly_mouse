@@ -12,25 +12,13 @@ const BAR_WIDTH = 680;
 const BAR_HEIGHT = 114;
 const BAR_MARGIN_BOTTOM = 8;
 const BAR_MARGIN_SIDE = 14;
-const SIDE_WIDTH = 108;
-const SIDE_GAP = 6;
 
 const STYLE = {
   fontFamily: FONT_FAMILY,
   fontSize: '24px',
   color: '#111111',
 };
-const DIFFICULTY_STYLE = {
-  ...STYLE,
-  fontSize: '20px',
-};
 const HP_TEXT_STYLE = {
-  fontFamily: FONT_FAMILY,
-  fontSize: '16px',
-  fontStyle: 'bold',
-  color: '#f0e6d2',
-};
-const GOLD_TEXT_STYLE = {
   fontFamily: FONT_FAMILY,
   fontSize: '16px',
   fontStyle: 'bold',
@@ -91,7 +79,7 @@ function drawRing(graphics, x, y, radius) {
 }
 
 export default class Hud {
-  constructor(scene, { hp, maxHp, level, xp, xpToNext, gold, inventory = null }) {
+  constructor(scene, { hp, maxHp, level, xp, xpToNext, inventory = null }) {
     const { width, height } = scene.scale;
     this.scene = scene;
     this.maxHp = maxHp;
@@ -101,10 +89,9 @@ export default class Hud {
     this.xpRatio = xpToNext > 0 ? Math.min(1, xp / xpToNext) : 1;
     this.inventory = inventory;
     this.currentAlpha = 1;
-    this.icons = { weapon: [], trinket: [] };
+    this.icons = { weapon: [] };
 
-    const groupWidth = BAR_WIDTH + SIDE_GAP + SIDE_WIDTH;
-    const barX = (width - groupWidth) / 2;
+    const barX = (width - BAR_WIDTH) / 2;
     const barY = height - BAR_HEIGHT - BAR_MARGIN_BOTTOM;
     const centerY = barY + BAR_HEIGHT / 2;
     const gridX = barX + BAR_MARGIN_SIDE;
@@ -117,19 +104,6 @@ export default class Hud {
     const middleWidth = 392;
     const middleY = centerY - 50;
     const middleHeight = 100;
-
-    const sideX = barX + BAR_WIDTH + SIDE_GAP;
-    const sideY = barY;
-    const trinketSize = 27;
-    const trinketGap = 5;
-    const trinketX = sideX + 8;
-    const trinketY = sideY + 6;
-    const goldButton = {
-      x: trinketX,
-      y: trinketY + trinketSize * 2 + trinketGap + 9,
-      width: trinketSize * 3 + trinketGap * 2,
-      height: 32,
-    };
 
     const itemSize = 46;
     const itemGap = 8;
@@ -150,17 +124,6 @@ export default class Hud {
           x: gridX + 4 + column * 32,
           y: gridY + 4 + row * 32,
           size: 28,
-        });
-      }
-    }
-
-    const trinketSlots = [];
-    for (let row = 0; row < 2; row += 1) {
-      for (let column = 0; column < 3; column += 1) {
-        trinketSlots.push({
-          x: trinketX + column * (trinketSize + trinketGap),
-          y: trinketY + row * (trinketSize + trinketGap),
-          size: trinketSize,
         });
       }
     }
@@ -202,9 +165,6 @@ export default class Hud {
       levelPips,
       upgradeButton,
       hpBar,
-      side: { x: sideX, y: sideY, width: SIDE_WIDTH, height: BAR_HEIGHT },
-      trinketSlots,
-      goldButton,
     };
 
     this.chrome = scene.add.graphics().setScrollFactor(0).setDepth(1000);
@@ -218,38 +178,13 @@ export default class Hud {
       .setScrollFactor(0)
       .setDepth(1001);
 
-    this.goldHover = scene.add.graphics().setScrollFactor(0).setDepth(1001).setVisible(false);
-    this.goldHover.fillStyle(GOLD, 0.16);
-    this.goldHover.fillPoints(
-      chamferPoints(goldButton.x, goldButton.y, goldButton.width, goldButton.height, 4),
-      true,
-    );
-    this.goldButtonHit = scene.add
-      .zone(goldButton.x, goldButton.y, goldButton.width, goldButton.height)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(1001)
-      .setInteractive({ useHandCursor: true });
-    this.goldButtonHit.on('pointerover', () => this.goldHover.setVisible(true));
-    this.goldButtonHit.on('pointerout', () => this.goldHover.setVisible(false));
-    this.goldButtonHit.on('pointerdown', () => this.scene.openShop());
-
     this.timeText = scene.add
       .text(MARGIN, TOP, '0:00', STYLE)
-      .setScrollFactor(0)
-      .setDepth(1000);
-    this.difficultyText = scene.add
-      .text(MARGIN, TOP + 34, '难度', DIFFICULTY_STYLE)
       .setScrollFactor(0)
       .setDepth(1000);
     this.levelText = scene.add
       .text(this.layout.avatar.badge.x, this.layout.avatar.badge.y + 1, '1', LEVEL_TEXT_STYLE)
       .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(1002);
-    this.goldText = scene.add
-      .text(goldButton.x + 27, goldButton.y + goldButton.height / 2, '0', GOLD_TEXT_STYLE)
-      .setOrigin(0, 0.5)
       .setScrollFactor(0)
       .setDepth(1002);
     this.hpText = scene.add
@@ -266,9 +201,8 @@ export default class Hud {
 
     this.tooltip = new ItemTooltip(scene);
     this.tooltipIndex = null;
-    this.itemZones = { weapon: [], trinket: [] };
+    this.itemZones = { weapon: [] };
     this.bindItemHover('weapon', weaponSlots);
-    this.bindItemHover('trinket', trinketSlots);
 
     this.weaponLevelGraphics = scene.add
       .graphics()
@@ -279,12 +213,10 @@ export default class Hud {
 
     this.setHp(hp, maxHp);
     this.setXp(level, xp, xpToNext);
-    this.setGold(gold);
     this.refreshItems();
 
     this.fadeRegions = [
       { x: barX, y: barY, width: BAR_WIDTH, height: BAR_HEIGHT },
-      { x: sideX, y: sideY, width: SIDE_WIDTH, height: BAR_HEIGHT },
       { x: MARGIN, y: TOP, width: 220, height: 64 },
       {
         x: middleX,
@@ -299,11 +231,8 @@ export default class Hud {
       this.xpGraphics,
       this.weaponLevelGraphics,
       this.avatar,
-      this.goldHover,
       this.timeText,
-      this.difficultyText,
       this.levelText,
-      this.goldText,
       this.hpText,
       ...this.upgradeButtons.map((button) => button.image),
     ];
@@ -468,26 +397,21 @@ export default class Hud {
   }
 
   showItemTooltip(kind, index) {
-    const ids = this.inventory
-      ? kind === 'weapon'
-        ? this.inventory.weapons
-        : this.inventory.trinkets
-      : [];
+    const ids = this.inventory ? this.inventory.weapons : [];
     const item = ids[index] ? getItem(ids[index]) : null;
     if (!item) {
       this.hideItemTooltip();
       return;
     }
 
-    const slots = kind === 'weapon' ? this.layout.weaponSlots : this.layout.trinketSlots;
-    const slot = slots[index];
+    const slot = this.layout.weaponSlots[index];
     const stats = this.scene.getWeaponStats ? this.scene.getWeaponStats(item.id) : item;
     this.tooltip.show(item, {
       x: slot.x + slot.size / 2,
       y: slot.y,
       size: slot.size,
       stats,
-      level: kind === 'weapon' ? this.getWeaponLevel(index) : 1,
+      level: this.getWeaponLevel(index),
     });
     this.tooltipIndex = { kind, index };
   }
@@ -500,20 +424,13 @@ export default class Hud {
   refreshItems() {
     this.hideItemTooltip();
     const weapons = this.inventory ? this.inventory.weapons : [];
-    const trinkets = this.inventory ? this.inventory.trinkets : [];
     this.syncIcons('weapon', this.layout.weaponSlots, weapons);
-    this.syncIcons('trinket', this.layout.trinketSlots, trinkets);
     this.refreshWeaponLevels();
     this.updateUpgradeButtons();
 
-    for (const [kind, ids] of [
-      ['weapon', weapons],
-      ['trinket', trinkets],
-    ]) {
-      this.itemZones[kind].forEach((zone, index) => {
-        if (zone.input) zone.input.cursor = ids[index] ? 'pointer' : 'default';
-      });
-    }
+    this.itemZones.weapon.forEach((zone, index) => {
+      if (zone.input) zone.input.cursor = weapons[index] ? 'pointer' : 'default';
+    });
   }
 
   syncIcons(kind, slots, ids) {
@@ -548,8 +465,7 @@ export default class Hud {
 
   drawChrome() {
     const g = this.chrome;
-    const { bar, grid, avatar, middle, weaponSlots, hpBar, side, trinketSlots, goldButton } =
-      this.layout;
+    const { bar, grid, avatar, middle, weaponSlots, hpBar } = this.layout;
 
     g.fillStyle(0x050b0f, 0.9);
     g.fillPoints(chamferPoints(bar.x, bar.y, bar.width, bar.height, 12), true);
@@ -571,39 +487,6 @@ export default class Hud {
     g.strokeCircle(avatar.x, avatar.y, avatar.xpRadius);
     drawRing(g, avatar.x, avatar.y, avatar.radius);
 
-    drawPanel(g, side.x, side.y, side.width, side.height);
-    for (const slot of trinketSlots) drawSlot(g, slot.x, slot.y, slot.size);
-
-    const buttonPoints = chamferPoints(
-      goldButton.x,
-      goldButton.y,
-      goldButton.width,
-      goldButton.height,
-      4,
-    );
-    g.fillStyle(0x071019, 1);
-    g.fillPoints(buttonPoints, true);
-    g.lineStyle(1, BRONZE, 1);
-    g.strokePoints(buttonPoints, true);
-    g.lineStyle(1, GOLD, 0.28);
-    g.lineBetween(
-      goldButton.x + 4,
-      goldButton.y + 1,
-      goldButton.x + goldButton.width - 4,
-      goldButton.y + 1,
-    );
-
-    const coinX = goldButton.x + 14;
-    const coinY = goldButton.y + goldButton.height / 2;
-    g.fillStyle(0xd4af37, 1);
-    g.fillCircle(coinX, coinY, 8);
-    g.lineStyle(1.5, 0xf0e6d2, 0.9);
-    g.strokeCircle(coinX, coinY, 8);
-    g.fillStyle(0xb8860b, 1);
-    g.fillCircle(coinX, coinY, 4.5);
-    g.fillStyle(0xf7e7a1, 0.9);
-    g.fillCircle(coinX - 2, coinY - 2.5, 1.8);
-
     const badge = avatar.badge;
     g.fillStyle(0x071019, 1);
     g.fillCircle(badge.x, badge.y, badge.radius);
@@ -615,15 +498,6 @@ export default class Hud {
 
   setTime(text) {
     this.timeText.setText(text);
-  }
-
-  setDifficulty(name, color) {
-    this.difficultyText.setText(`难度 ${name}`);
-    this.difficultyText.setColor(color);
-  }
-
-  setGold(gold) {
-    this.goldText.setText(String(gold));
   }
 
   setHp(hp, maxHp) {
